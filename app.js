@@ -28,6 +28,7 @@
     headerAvatarFallback: $("#headerAvatarFallback"),
     headerNickname: $("#headerNickname"),
     todayLabel: $("#todayLabel"),
+    assistantText: $("#assistantText"),
     chestAvailability: $("#chestAvailability"),
     diamondAvailability: $("#diamondAvailability"),
     chestFeedback: $("#chestFeedback"),
@@ -52,7 +53,6 @@
     diamondDurationInput: $("#diamondDurationInput"),
     darkModeToggle: $("#darkModeToggle"),
     themeGrid: $("#themeGrid"),
-    importInput: $("#importInput"),
     installBtn: $("#installBtn"),
     toast: $("#toast"),
     claimBothBtn: $("#claimBothBtn"),
@@ -64,7 +64,6 @@
   let pendingAvatarBlob = null;
   let pendingAvatarUrl = "";
   let avatarUrl = "";
-  let avatarBackupData = null;
   let picker = null;
 
   const runtime = {
@@ -156,7 +155,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.warn("无法保存本地设置。", error);
-      showToast("本地存储空间不足，请先导出备份");
+      showToast("本地存储空间不足，请清理部分数据后重试");
     }
   }
 
@@ -295,6 +294,7 @@
     rootStyle.setProperty("--accent", accent);
     rootStyle.setProperty("--accent-strong", strong);
     rootStyle.setProperty("--accent-soft", soft);
+    rootStyle.setProperty("--button-edge", colorMix(strong, "#071d43", 0.4));
     rootStyle.setProperty("--on-accent", luminance(accent) > 174 ? "#14243c" : "#ffffff");
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", dark ? "#081324" : "#edf5ff");
@@ -386,7 +386,7 @@
     if (!current) {
       return {
         main: "尚未记录",
-        sub: "点击“已领取”记录当前时间",
+        sub: "点击“下一个”记录当前时间",
         ready: false,
       };
     }
@@ -462,6 +462,39 @@
     elements.combinedFeedback.innerHTML = `<button class="undo-chip" type="button" data-undo-batch="1">撤回本次双领，回到上一记录 · <span>${remainingSeconds(runtime.batchUndo.expiresAt)}</span>s</button>`;
   }
 
+  function renderAssistant() {
+    const chest = data.current.chest;
+    const diamond = data.current.diamond;
+    const now = Date.now();
+    const chestReady = chest && now >= chest.expectedAt;
+    const diamondReady = diamond && now >= diamond.expectedAt;
+
+    if (chestReady && diamondReady) {
+      elements.assistantText.textContent =
+        "宝箱和钻石都可以领取啦，先去游戏里收下，再回来点“下一个”。";
+      return;
+    }
+    if (chestReady) {
+      elements.assistantText.textContent =
+        "宝箱已经到领取时间了，钻石还在计时中。别忘了去游戏里看一眼。";
+      return;
+    }
+    if (diamondReady) {
+      elements.assistantText.textContent =
+        "钻石奖励已经可以领取了，宝箱还没有到时间。可以先收钻石。";
+      return;
+    }
+    if (chest || diamond) {
+      const parts = [];
+      if (chest) parts.push(`宝箱 ${formatTime(chest.expectedAt)}`);
+      if (diamond) parts.push(`钻石 ${formatTime(diamond.expectedAt)}`);
+      elements.assistantText.textContent = `我记下了：${parts.join("，")} 可领取。到时候回来看看，别错过啦。`;
+      return;
+    }
+    elements.assistantText.textContent =
+      "领完奖励后点一下“下一个”，我会把下一次可领取时间记在这本手账里。";
+  }
+
   function renderStats() {
     const start = dateStartFor(runtime.period);
     const periodEvents = events.filter(
@@ -514,6 +547,7 @@
     renderFeedback("chest");
     renderFeedback("diamond");
     renderCombinedUndo();
+    renderAssistant();
     renderStats();
   }
 
@@ -753,7 +787,6 @@
         await putMedia({ key: "avatar", blob: pendingAvatarBlob, type: pendingAvatarBlob.type });
         if (avatarUrl) URL.revokeObjectURL(avatarUrl);
         avatarUrl = URL.createObjectURL(pendingAvatarBlob);
-        avatarBackupData = await blobToDataUrl(pendingAvatarBlob);
         if (pendingAvatarUrl) URL.revokeObjectURL(pendingAvatarUrl);
         pendingAvatarUrl = "";
         pendingAvatarBlob = null;
@@ -786,144 +819,6 @@
     showToast("设置已保存，新间隔从下次领取开始生效");
   }
 
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  function dataUrlToBlob(dataUrl) {
-    const [header, payload] = String(dataUrl).split(",");
-    const mime = /data:([^;]+)/.exec(header)?.[1] || "image/jpeg";
-    const binary = atob(payload);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return new Blob([bytes], { type: mime });
-  }
-
-  async function exportBackup() {
-    try {
-      const payload = {
-        app: "像素生存者2 钻石手账",
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        data,
-        events,
-        avatar: avatarBackupData,
-      };
-      const filename = `钻石手账备份-${new Date().toISOString().slice(0, 10)}.json`;
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
-      });
-      const file = new File([blob], filename, { type: "application/json" });
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS && navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({
-            title: "钻石手账本地备份",
-            files: [file],
-          });
-        } catch (shareError) {
-          if (shareError?.name === "AbortError") return;
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = filename;
-          link.click();
-          window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-        }
-      } else {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-      }
-      showToast("本地备份已导出");
-    } catch (error) {
-      if (error?.name !== "AbortError") {
-        console.error(error);
-        showToast("导出失败，请重试");
-      }
-    }
-  }
-
-  async function importBackup(file) {
-    if (!file) return;
-    try {
-      const payload = JSON.parse(await file.text());
-      if (
-        !payload ||
-        payload.version !== 1 ||
-        !payload.data ||
-        !Array.isArray(payload.events)
-      ) {
-        throw new Error("备份格式不正确");
-      }
-      if (!window.confirm("导入备份会覆盖当前手机里的领取记录，确定继续吗？")) return;
-
-      const restored = payload.events
-        .filter(
-          (event) =>
-            event &&
-            event.id &&
-            ["chest", "diamond"].includes(event.type) &&
-            Number.isFinite(Number(event.claimedAt))
-        )
-        .map((event) => ({
-          id: String(event.id),
-          type: event.type,
-          claimedAt: Number(event.claimedAt),
-          expectedAt: Number(event.expectedAt),
-          duration: Number(event.duration),
-          reward:
-            event.type === "diamond"
-              ? 2
-              : [0, 1, 2].includes(Number(event.reward))
-                ? Number(event.reward)
-                : 1,
-        }));
-
-      await clearEvents();
-      for (const event of restored) {
-        await putEvent(event);
-      }
-      data = normalizeData(payload.data);
-      events = restored;
-      runtime.undo = { chest: null, diamond: null };
-      runtime.batchUndo = null;
-      picker = null;
-      saveData();
-
-      if (payload.avatar) {
-        const blob = dataUrlToBlob(payload.avatar);
-        await putMedia({ key: "avatar", blob, type: blob.type });
-        if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-        avatarUrl = URL.createObjectURL(blob);
-        avatarBackupData = payload.avatar;
-      } else {
-        await clearMedia();
-        if (avatarUrl) URL.revokeObjectURL(avatarUrl);
-        avatarUrl = "";
-        avatarBackupData = null;
-      }
-      renderAll();
-      closeSheet(elements.settingsSheet);
-      showToast("备份已恢复");
-    } catch (error) {
-      console.error(error);
-      showToast(`导入失败：${error.message || "文件无法读取"}`);
-    } finally {
-      elements.importInput.value = "";
-    }
-  }
-
   async function resetAllData() {
     if (!window.confirm("将清空昵称、头像、设置和全部领取记录，且无法撤销。确定继续吗？")) {
       return;
@@ -944,7 +839,6 @@
       const avatar = await getMedia("avatar");
       if (avatar?.blob) {
         avatarUrl = URL.createObjectURL(avatar.blob);
-        avatarBackupData = await blobToDataUrl(avatar.blob);
         setAvatarSources(avatarUrl);
       }
     } catch (error) {
@@ -1055,11 +949,6 @@
 
     $("#saveProfileBtn").addEventListener("click", saveProfile);
     $("#saveSettingsBtn").addEventListener("click", saveSettings);
-    $("#exportBtn").addEventListener("click", exportBackup);
-    $("#importBtn").addEventListener("click", () => elements.importInput.click());
-    elements.importInput.addEventListener("change", (event) => {
-      importBackup(event.target.files?.[0]);
-    });
     $("#resetBtn").addEventListener("click", resetAllData);
     elements.installBtn.addEventListener("click", promptInstall);
 
@@ -1099,6 +988,7 @@
       if (!document.hidden) {
         renderAvailability("chest");
         renderAvailability("diamond");
+        renderAssistant();
         renderStats();
       }
     });
@@ -1125,6 +1015,7 @@
       renderDateHeader();
       renderAvailability("chest");
       renderAvailability("diamond");
+      renderAssistant();
     }, 30000);
 
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {

@@ -28,12 +28,6 @@
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <img
-            class="brand-mark"
-            src="./assets/app-icon-192.png"
-            alt=""
-            aria-hidden="true"
-          />
           <div class="brand-copy">
             <span class="eyebrow">像素生存者2</span>
             <h1>钻石手账</h1>
@@ -41,12 +35,7 @@
         </div>
         <div class="topbar-actions">
           <img
-            class="platform-logo logo-light"
-            src="./assets/platform-logo-blue.png"
-            alt="SG.像素2"
-          />
-          <img
-            class="platform-logo logo-dark"
+            class="platform-logo"
             src="./assets/platform-logo-white.png"
             alt="SG.像素2"
           />
@@ -91,6 +80,24 @@
           </span>
         </section>
 
+        <section class="assistant-card" aria-label="像素小助手">
+          <div class="assistant-bubble">
+            <div class="assistant-heading">
+              <span>像素小助手</span>
+              <span class="assistant-online"><i></i>AI 在线</span>
+            </div>
+            <p id="assistantText">
+              领完奖励后点一下“下一个”，我会把下一次可领取时间记在这本手账里。
+            </p>
+          </div>
+          <img
+            class="assistant-mascot"
+            src="./assets/assistant-mascot.png"
+            alt="像素小助手"
+            draggable="false"
+          />
+        </section>
+
         <section class="reward-grid" aria-label="奖励领取记录">
           <article class="reward-card chest-card" data-kind="chest">
             <div class="card-topline">
@@ -108,10 +115,10 @@
             </div>
             <div class="availability" id="chestAvailability">
               <strong class="availability-main">尚未记录</strong>
-              <span class="availability-sub">点击“已领取”记录当前时间</span>
+              <span class="availability-sub">点击“下一个”记录当前时间</span>
             </div>
             <button class="claim-button" type="button" data-claim="chest">
-              已领取
+              下一个
             </button>
             <div class="card-feedback" id="chestFeedback" aria-live="polite"></div>
           </article>
@@ -132,10 +139,10 @@
             </div>
             <div class="availability" id="diamondAvailability">
               <strong class="availability-main">尚未记录</strong>
-              <span class="availability-sub">点击“已领取”记录当前时间</span>
+              <span class="availability-sub">点击“下一个”记录当前时间</span>
             </div>
             <button class="claim-button" type="button" data-claim="diamond">
-              已领取
+              下一个
             </button>
             <div
               class="card-feedback"
@@ -148,7 +155,7 @@
         <section class="combined-area">
           <button class="combined-button" id="claimBothBtn" type="button">
             <span class="combined-icon" aria-hidden="true">✓</span>
-            两个都已领取，一起记录
+            两边都领了，一起记录
           </button>
           <div class="combined-feedback" id="combinedFeedback" aria-live="polite"></div>
         </section>
@@ -316,12 +323,9 @@
         <div class="settings-group">
           <div class="group-heading">
             <h3>本地数据</h3>
-            <span>换手机前建议先导出备份</span>
+            <span>所有记录仅保存在当前手机</span>
           </div>
           <div class="settings-actions">
-            <button class="settings-action" id="exportBtn" type="button">导出备份</button>
-            <button class="settings-action" id="importBtn" type="button">导入备份</button>
-            <input id="importInput" type="file" accept="application/json,.json" hidden />
             <button class="settings-action" id="installBtn" type="button">添加到桌面</button>
             <button class="settings-action danger" id="resetBtn" type="button">清空本地数据</button>
           </div>

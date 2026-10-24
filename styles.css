@@ -18,6 +18,7 @@
   --shadow-small: 0 8px 22px rgba(32, 92, 162, 0.09);
   --success: #0c9b76;
   --danger: #e55364;
+  --button-edge: #124aa3;
   --radius-xl: 30px;
   --radius-lg: 24px;
   --radius-md: 18px;
@@ -38,6 +39,7 @@ html[data-mode="dark"] {
   --shadow: 0 22px 58px rgba(0, 0, 0, 0.25);
   --shadow-small: 0 9px 25px rgba(0, 0, 0, 0.22);
   --success: #46d3a6;
+  --button-edge: #092c66;
 }
 
 * {
@@ -143,8 +145,18 @@ input:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 66px;
+  min-height: 76px;
+  padding: 13px 15px;
   gap: 12px;
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 88% -20%, rgba(255, 255, 255, 0.24), transparent 44%),
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  box-shadow:
+    0 7px 0 var(--button-edge),
+    0 17px 34px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 
 .brand {
@@ -152,14 +164,6 @@ input:focus-visible {
   align-items: center;
   min-width: 0;
   gap: 11px;
-}
-
-.brand-mark {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border-radius: 13px;
-  box-shadow: var(--shadow-small);
 }
 
 .brand-copy {
@@ -186,6 +190,10 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.topbar .eyebrow {
+  color: rgba(255, 255, 255, 0.74);
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -195,14 +203,10 @@ input:focus-visible {
 
 .platform-logo {
   display: block;
-  width: clamp(68px, 22vw, 105px);
+  width: clamp(66px, 21vw, 100px);
   height: auto;
   object-fit: contain;
-}
-
-html[data-mode="light"] .logo-dark,
-html[data-mode="dark"] .logo-light {
-  display: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 28, 76, 0.18));
 }
 
 .icon-button {
@@ -211,17 +215,20 @@ html[data-mode="dark"] .logo-light {
   height: 42px;
   flex: 0 0 auto;
   place-items: center;
-  color: var(--accent);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 14px;
-  box-shadow: var(--shadow-small);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 3px 0 rgba(6, 40, 99, 0.3);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 
 .icon-button:active {
-  transform: scale(0.95);
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .icon-button svg {
@@ -234,7 +241,7 @@ html[data-mode="dark"] .logo-light {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 10px 0 15px;
+  margin: 18px 2px 13px;
   gap: 12px;
 }
 
@@ -313,6 +320,94 @@ html[data-mode="dark"] .logo-light {
   background: var(--success);
   border-radius: 50%;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 13%, transparent);
+}
+
+.assistant-card {
+  display: flex;
+  align-items: center;
+  padding: 12px 11px 12px 13px;
+  margin-bottom: 13px;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow-small);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.assistant-bubble {
+  position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 67px;
+  padding: 10px 12px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent-soft) 72%, var(--surface-solid)),
+      var(--accent-soft)
+    );
+  border: 1px solid color-mix(in srgb, var(--accent) 11%, var(--line));
+  border-radius: 15px;
+}
+
+.assistant-bubble::after {
+  position: absolute;
+  top: 25px;
+  right: -7px;
+  width: 0;
+  height: 0;
+  content: "";
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 8px solid var(--accent-soft);
+}
+
+.assistant-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  gap: 8px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.assistant-online {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.assistant-online i {
+  width: 5px;
+  height: 5px;
+  background: var(--success);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.assistant-bubble p {
+  margin: 0;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 580;
+  line-height: 1.5;
+}
+
+.assistant-mascot {
+  width: 62px;
+  height: auto;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 7px 6px rgba(32, 71, 123, 0.16));
 }
 
 .reward-grid {
@@ -451,17 +546,29 @@ html[data-mode="dark"] .logo-light {
   color: var(--on-accent);
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   border-radius: 15px;
-  box-shadow: 0 9px 20px color-mix(in srgb, var(--accent) 27%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 5px 0 var(--button-edge),
+    0 10px 18px color-mix(in srgb, var(--accent) 20%, transparent);
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.02em;
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
 }
 
-.claim-button:active,
+.claim-button:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 0 var(--button-edge);
+}
+
 .combined-button:active,
 .primary-wide:active,
 .settings-action:active {
-  transform: translateY(1px) scale(0.99);
+  transform: translateY(3px);
 }
 
 .card-feedback {
@@ -546,15 +653,27 @@ html[data-mode="dark"] .logo-light {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
-  border: 1px solid var(--line-strong);
-  border-radius: 16px;
+  color: var(--on-accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 15px;
   font-size: 13px;
   font-weight: 780;
-  box-shadow: var(--shadow-small);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 5px 0 var(--button-edge),
+    0 10px 18px color-mix(in srgb, var(--accent) 18%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  transition:
+    transform 80ms ease,
+    box-shadow 80ms ease;
+}
+
+.combined-button:active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 1px 0 var(--button-edge);
 }
 
 .combined-icon {
@@ -562,8 +681,8 @@ html[data-mode="dark"] .logo-light {
   width: 20px;
   height: 20px;
   place-items: center;
-  color: var(--on-accent);
-  background: var(--accent);
+  color: var(--accent);
+  background: #ffffff;
   border-radius: 7px;
   font-size: 12px;
   font-weight: 900;
@@ -1146,6 +1265,12 @@ html[data-mode="dark"] .logo-light {
     padding-inline: 12px;
   }
 
+  .topbar {
+    min-height: 72px;
+    padding: 12px 13px;
+    border-radius: 20px;
+  }
+
   .topbar-actions {
     gap: 6px;
   }
@@ -1157,6 +1282,14 @@ html[data-mode="dark"] .logo-light {
   .icon-button {
     width: 39px;
     height: 39px;
+  }
+
+  .assistant-card {
+    padding: 11px 9px 11px 11px;
+  }
+
+  .assistant-mascot {
+    width: 57px;
   }
 
   .reward-grid {
@@ -1196,12 +1329,16 @@ html[data-mode="dark"] .logo-light {
 }
 
 @media (max-width: 335px) {
-  .brand-mark {
-    display: none;
-  }
-
   .platform-logo {
     width: 57px;
+  }
+
+  .assistant-mascot {
+    width: 51px;
+  }
+
+  .assistant-bubble {
+    padding: 9px 10px;
   }
 
   .reward-grid {
