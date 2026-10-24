@@ -34,9 +34,7 @@
     assistantText: $("#assistantText"),
     chestAvailability: $("#chestAvailability"),
     diamondAvailability: $("#diamondAvailability"),
-    chestFeedback: $("#chestFeedback"),
-    diamondFeedback: $("#diamondFeedback"),
-    combinedFeedback: $("#combinedFeedback"),
+    actionDock: $("#actionDock"),
     chestIntervalLabel: $("#chestIntervalLabel"),
     diamondIntervalLabel: $("#diamondIntervalLabel"),
     periodLabel: $("#periodLabel"),
@@ -49,6 +47,11 @@
     profileSheet: $("#profileSheet"),
     settingsSheet: $("#settingsSheet"),
     qqGroupSheet: $("#qqGroupSheet"),
+    ledgerSheet: $("#ledgerSheet"),
+    ledgerTitle: $("#ledgerTitle"),
+    ledgerSummary: $("#ledgerSummary"),
+    ledgerList: $("#ledgerList"),
+    celebrationCanvas: $("#celebrationCanvas"),
     profileAvatarImage: $("#profileAvatarImage"),
     profileAvatarFallback: $("#profileAvatarFallback"),
     nicknameInput: $("#nicknameInput"),
@@ -69,6 +72,11 @@
   let pendingAvatarUrl = "";
   let avatarUrl = "";
   let picker = null;
+  let celebrationFrame = 0;
+  let celebrationLastTime = 0;
+  let celebrationAccumulator = 0;
+  let celebrationParticles = [];
+  let celebrationContext = null;
 
   const runtime = {
     undo: { chest: null, diamond: null },
@@ -422,12 +430,18 @@
     return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
   }
 
-  function renderFeedback(kind) {
-    const target = kind === "chest" ? elements.chestFeedback : elements.diamondFeedback;
-    const parts = [];
-    const current = data.current[kind];
+  function diamondTotalInWindow(sourceEvents, now = Date.now()) {
+    const cutoff = now - 60000;
+    return sourceEvents
+      .filter((event) => Number(event.claimedAt) > cutoff && Number(event.claimedAt) <= now)
+      .reduce((total, event) => total + (Number(event.reward) || 0), 0);
+  }
 
-    if (picker === kind && current) {
+  function renderActionDock() {
+    const parts = [];
+    const now = Date.now();
+
+    if (picker === "chest" && data.current.chest) {
       parts.push(`
         <div class="quantity-box">
           <span class="quantity-label">本次宝箱开出多少钻石？</span>
@@ -435,7 +449,7 @@
             ${[0, 1, 2]
               .map(
                 (value) =>
-                  `<button class="quantity-chip${current.reward === value ? " active" : ""}" type="button" data-quantity="${value}">${value}</button>`
+                  `<button class="quantity-chip${data.current.chest.reward === value ? " active" : ""}" type="button" data-quantity="${value}">${value}</button>`
               )
               .join("")}
           </div>
@@ -443,27 +457,46 @@
       `);
     }
 
-    const undo = runtime.undo[kind];
-    if (undo && Date.now() < undo.expiresAt) {
-      parts.push(
-        `<button class="undo-chip" type="button" data-undo-kind="${kind}">撤回，回到上次记录 · <span>${remainingSeconds(undo.expiresAt)}</span>s</button>`
-      );
-    } else if (undo) {
-      runtime.undo[kind] = null;
+    const undoButtons = [];
+    for (const kind of ["chest", "diamond"]) {
+      const undo = runtime.undo[kind];
+      if (undo && now < undo.expiresAt) {
+        const label = kind === "chest" ? "宝箱" : "钻石";
+        undoButtons.push(
+          `<button class="undo-chip" type="button" data-undo-kind="${kind}">撤回${label} · <span>${remainingSeconds(undo.expiresAt)}</span>s</button>`
+        );
+      } else if (undo) {
+        runtime.undo[kind] = null;
+      }
     }
-
-    target.innerHTML = parts.join("");
-  }
-
-  function renderCombinedUndo() {
-    if (runtime.batchUndo && Date.now() >= runtime.batchUndo.expiresAt) {
+    if (runtime.batchUndo && now < runtime.batchUndo.expiresAt) {
+      undoButtons.push(
+        `<button class="undo-chip" type="button" data-undo-batch="1">撤回双领 · <span>${remainingSeconds(runtime.batchUndo.expiresAt)}</span>s</button>`
+      );
+    } else if (runtime.batchUndo) {
       runtime.batchUndo = null;
     }
-    if (!runtime.batchUndo) {
-      elements.combinedFeedback.innerHTML = "";
+
+    if (!parts.length && !undoButtons.length) {
+      elements.actionDock.innerHTML = `
+        <div class="action-dock-idle">
+          <span class="action-dock-mark">+</span>
+          <span>领取后可在这里选择本次钻石收益或撤回记录</span>
+        </div>
+      `;
       return;
     }
-    elements.combinedFeedback.innerHTML = `<button class="undo-chip" type="button" data-undo-batch="1">撤回本次双领，回到上一记录 · <span>${remainingSeconds(runtime.batchUndo.expiresAt)}</span>s</button>`;
+
+    const recentTotal = diamondTotalInWindow(events, now);
+    elements.actionDock.innerHTML = `
+      <div class="action-dock-content">
+        ${parts.join("")}
+        <div class="action-dock-meta">
+          <span class="rolling-limit">近 60 秒 ${recentTotal}/6 钻石</span>
+          <div class="undo-actions">${undoButtons.join("")}</div>
+        </div>
+      </div>
+    `;
   }
 
   function renderAssistant() {
@@ -512,6 +545,78 @@
     elements.formulaTotal.textContent = `${total} 钻石`;
   }
 
+  function renderLedger() {
+    const start = dateStartFor(runtime.period);
+    const periodEvents = events
+      .filter(
+        (event) => Number(event.claimedAt) >= start && Number(event.claimedAt) <= Date.now()
+      )
+      .sort((a, b) => b.claimedAt - a.claimedAt);
+    const total = periodEvents.reduce((sum, event) => sum + (Number(event.reward) || 0), 0);
+    const label =
+      runtime.period === "day" ? "本日" : runtime.period === "week" ? "本周" : "本月";
+    elements.ledgerTitle.textContent = `${label}钻石记录`;
+    elements.ledgerSummary.textContent = `${label}共获得 ${total} 钻石 · ${periodEvents.length} 条记录`;
+
+    if (!periodEvents.length) {
+      elements.ledgerList.innerHTML = '<div class="ledger-empty">当前周期还没有钻石记录</div>';
+      return;
+    }
+
+    elements.ledgerList.innerHTML = periodEvents
+      .map((event) => {
+        const date = new Date(event.claimedAt);
+        const stamp = `${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(event.claimedAt)}`;
+        const isChest = event.type === "chest";
+        return `
+          <article class="ledger-item">
+            <img class="ledger-icon" src="./assets/${isChest ? "chest" : "diamond"}.png" alt="" />
+            <div class="ledger-copy">
+              <strong>${isChest ? "宝箱" : "钻石奖励"}</strong>
+              <span>${stamp}</span>
+            </div>
+            <span class="ledger-reward">+${Number(event.reward) || 0}<small>钻石</small></span>
+            <button class="ledger-delete" type="button" data-delete-record="${event.id}" aria-label="删除这条钻石记录">×</button>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function openLedger() {
+    renderLedger();
+    openSheet(elements.ledgerSheet);
+  }
+
+  async function deleteDiamondRecord(id) {
+    const record = events.find((event) => event.id === id);
+    if (!record) return;
+    events = events.filter((event) => event.id !== id);
+    for (const kind of ["chest", "diamond"]) {
+      if (data.current[kind]?.eventId === id) {
+        data.current[kind].eventId = "";
+      }
+      if (runtime.undo[kind]?.eventIds?.includes(id)) {
+        runtime.undo[kind] = null;
+      }
+    }
+    if (runtime.batchUndo?.eventIds?.includes(id)) {
+      runtime.batchUndo = null;
+    }
+    picker = null;
+    saveData();
+    renderActionDock();
+    renderStats();
+    renderAssistant();
+    renderLedger();
+    showToast("钻石记录已删除");
+    try {
+      await deleteEvents([id]);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   function renderIntervals() {
     const { chest, diamond } = data.settings.durations;
     elements.chestIntervalLabel.textContent = `每 ${chest} 分钟`;
@@ -537,9 +642,7 @@
     renderIntervals();
     renderAvailability("chest");
     renderAvailability("diamond");
-    renderFeedback("chest");
-    renderFeedback("diamond");
-    renderCombinedUndo();
+    renderActionDock();
     renderAssistant();
     renderStats();
   }
@@ -559,6 +662,129 @@
     void button.offsetWidth;
     button.classList.add("is-pressing");
     window.setTimeout(() => button.classList.remove("is-pressing"), 220);
+  }
+
+  function resizeCelebrationCanvas() {
+    const canvas = elements.celebrationCanvas;
+    if (!canvas) return null;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+    }
+    const context = canvas.getContext("2d");
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    return context;
+  }
+
+  function updateCelebration(stepSeconds) {
+    for (const particle of celebrationParticles) {
+      particle.life -= stepSeconds;
+      particle.vy += 760 * stepSeconds;
+      particle.vx *= 0.994;
+      particle.x += particle.vx * stepSeconds;
+      particle.y += particle.vy * stepSeconds;
+      particle.rotation += particle.rotationSpeed * stepSeconds;
+      if (particle.kind === "spark") {
+        particle.vx *= 0.988;
+        particle.vy *= 0.992;
+      }
+    }
+    celebrationParticles = celebrationParticles.filter(
+      (particle) =>
+        particle.life > 0 &&
+        particle.y < window.innerHeight + 80 &&
+        particle.x > -100 &&
+        particle.x < window.innerWidth + 100
+    );
+  }
+
+  function drawCelebration() {
+    if (!celebrationContext) return;
+    const context = celebrationContext;
+    context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (const particle of celebrationParticles) {
+      const fade = Math.min(1, particle.life / particle.maxLife * 2.2);
+      context.save();
+      context.globalAlpha = Math.max(0, fade);
+      context.translate(particle.x, particle.y);
+      context.rotate(particle.rotation);
+      context.fillStyle = particle.color;
+      if (particle.kind === "spark") {
+        context.shadowColor = particle.color;
+        context.shadowBlur = 9;
+        context.beginPath();
+        context.arc(0, 0, particle.width, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        const squish = 0.35 + Math.abs(Math.cos(particle.rotation * 1.6)) * 0.65;
+        context.fillRect(
+          -particle.width / 2,
+          (-particle.height / 2) * squish,
+          particle.width,
+          particle.height * squish
+        );
+      }
+      context.restore();
+    }
+  }
+
+  function celebrationLoop(timestamp) {
+    const fixedStepMs = 1000 / 120;
+    if (!celebrationLastTime) celebrationLastTime = timestamp;
+    const elapsed = Math.min(100, timestamp - celebrationLastTime);
+    celebrationLastTime = timestamp;
+    celebrationAccumulator += elapsed;
+    while (celebrationAccumulator >= fixedStepMs) {
+      updateCelebration(fixedStepMs / 1000);
+      celebrationAccumulator -= fixedStepMs;
+    }
+    drawCelebration();
+    if (celebrationParticles.length) {
+      celebrationFrame = window.requestAnimationFrame(celebrationLoop);
+    } else {
+      celebrationFrame = 0;
+      celebrationLastTime = 0;
+      celebrationAccumulator = 0;
+    }
+  }
+
+  function launchCelebration(button) {
+    if (!button) return;
+    celebrationContext = resizeCelebrationCanvas();
+    if (!celebrationContext) return;
+    const rect = button.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height * 0.38;
+    const accent = getComputedStyle(elements.html).getPropertyValue("--accent").trim() || "#2f7dff";
+    const colors = [accent, "#ffffff", "#67dcff", "#ffd45f", "#ff82ad", "#60e2a8"];
+    const count = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 20 : 58;
+
+    for (let index = 0; index < count; index += 1) {
+      const isSpark = index % 4 === 0;
+      const angle = -Math.PI * (0.15 + Math.random() * 0.7);
+      const speed = (isSpark ? 420 : 300) + Math.random() * 660;
+      const maxLife = 0.85 + Math.random() * 0.8;
+      celebrationParticles.push({
+        x: originX + (Math.random() - 0.5) * rect.width * 0.42,
+        y: originY + (Math.random() - 0.5) * 8,
+        vx: Math.cos(angle) * speed * (0.55 + Math.random() * 0.55),
+        vy: Math.sin(angle) * speed,
+        width: isSpark ? 1.5 + Math.random() * 2 : 3 + Math.random() * 5,
+        height: isSpark ? 0 : 7 + Math.random() * 8,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 13,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        kind: isSpark ? "spark" : "ribbon",
+        maxLife,
+        life: maxLife,
+      });
+    }
+    if (!celebrationFrame) celebrationFrame = window.requestAnimationFrame(celebrationLoop);
   }
 
   function makeClaim(kind, now) {
@@ -584,10 +810,14 @@
     };
   }
 
-  async function claimSingle(kind) {
+  async function claimSingle(kind, button) {
     const now = Date.now();
-    const previous = clone(data.current[kind]);
     const created = makeClaim(kind, now);
+    if (diamondTotalInWindow([...events, created.event], now) > 6) {
+      showToast("60 秒内最多记录 6 颗钻石，请稍后再试");
+      return;
+    }
+    const previous = clone(data.current[kind]);
     data.current[kind] = created.current;
     events.push(created.event);
     runtime.batchUndo = null;
@@ -600,6 +830,7 @@
     picker = kind === "chest" ? "chest" : null;
     saveData();
     renderAll();
+    launchCelebration(button);
     showToast(`已记录，预计 ${dateRelation(created.current.expectedAt)} ${formatTime(created.current.expectedAt)} 可领取`);
     try {
       await putEvent(created.event);
@@ -609,7 +840,7 @@
     }
   }
 
-  async function claimBoth() {
+  async function claimBoth(button) {
     const now = Date.now();
     const previous = {
       chest: clone(data.current.chest),
@@ -617,6 +848,10 @@
     };
     const chestClaim = makeClaim("chest", now);
     const diamondClaim = makeClaim("diamond", now);
+    if (diamondTotalInWindow([...events, chestClaim.event, diamondClaim.event], now) > 6) {
+      showToast("60 秒内最多记录 6 颗钻石，请稍后再试");
+      return;
+    }
     data.current.chest = chestClaim.current;
     data.current.diamond = diamondClaim.current;
     events.push(chestClaim.event, diamondClaim.event);
@@ -630,6 +865,7 @@
     picker = "chest";
     saveData();
     renderAll();
+    launchCelebration(button);
     showToast("宝箱和钻石都已记录，宝箱收益默认按 1 钻石计算");
     try {
       await Promise.all([putEvent(chestClaim.event), putEvent(diamondClaim.event)]);
@@ -643,14 +879,19 @@
     const reward = [0, 1, 2].includes(Number(value)) ? Number(value) : 1;
     const current = data.current.chest;
     if (!current) return;
-    current.reward = reward;
     const event = events.find((item) => item.id === current.eventId);
-    if (event) {
-      event.reward = reward;
+    const candidateEvents = events.map((item) =>
+      item.id === current.eventId ? { ...item, reward } : item
+    );
+    if (diamondTotalInWindow(candidateEvents, Date.now()) > 6) {
+      showToast("60 秒内最多记录 6 颗钻石，不能继续增加");
+      return;
     }
+    current.reward = reward;
+    if (event) event.reward = reward;
     picker = null;
     saveData();
-    renderFeedback("chest");
+    renderActionDock();
     renderStats();
     showToast(`本次宝箱按 ${reward} 钻石记录`);
     if (event) {
@@ -666,7 +907,7 @@
     const undo = runtime.undo[kind];
     if (!undo || Date.now() >= undo.expiresAt) {
       runtime.undo[kind] = null;
-      renderFeedback(kind);
+      renderActionDock();
       return;
     }
     data.current[kind] = undo.previous;
@@ -687,7 +928,7 @@
     const undo = runtime.batchUndo;
     if (!undo || Date.now() >= undo.expiresAt) {
       runtime.batchUndo = null;
-      renderCombinedUndo();
+      renderActionDock();
       return;
     }
     data.current.chest = undo.previous.chest;
@@ -977,14 +1218,13 @@
   }
 
   function updateUndoTimers() {
-    let expired = false;
+    let needsRender = false;
     for (const kind of ["chest", "diamond"]) {
       const undo = runtime.undo[kind];
       if (!undo) continue;
       if (Date.now() >= undo.expiresAt) {
         runtime.undo[kind] = null;
-        renderFeedback(kind);
-        expired = true;
+        needsRender = true;
       } else {
         const counter = document.querySelector(`[data-undo-kind="${kind}"] span`);
         if (counter) counter.textContent = String(remainingSeconds(undo.expiresAt));
@@ -993,14 +1233,13 @@
     if (runtime.batchUndo) {
       if (Date.now() >= runtime.batchUndo.expiresAt) {
         runtime.batchUndo = null;
-        renderCombinedUndo();
-        expired = true;
+        needsRender = true;
       } else {
         const counter = document.querySelector("[data-undo-batch] span");
         if (counter) counter.textContent = String(remainingSeconds(runtime.batchUndo.expiresAt));
       }
     }
-    if (expired) return;
+    if (needsRender) renderActionDock();
   }
 
   async function promptInstall() {
@@ -1029,12 +1268,12 @@
     $$("[data-claim]").forEach((button) => {
       button.addEventListener("click", () => {
         triggerButtonPress(button);
-        claimSingle(button.dataset.claim);
+        claimSingle(button.dataset.claim, button);
       });
     });
     elements.claimBothBtn.addEventListener("click", () => {
       triggerButtonPress(elements.claimBothBtn);
-      claimBoth();
+      claimBoth(elements.claimBothBtn);
     });
 
     document.addEventListener("click", (event) => {
@@ -1050,6 +1289,11 @@
       }
       if (event.target.closest("[data-undo-batch]")) {
         undoBatch();
+        return;
+      }
+      const deleteRecordButton = event.target.closest("[data-delete-record]");
+      if (deleteRecordButton) {
+        deleteDiamondRecord(deleteRecordButton.dataset.deleteRecord);
       }
     });
 
@@ -1068,6 +1312,7 @@
     $("#profileBtn").addEventListener("click", openProfile);
     $("#avatarPickBtn").addEventListener("click", () => elements.avatarInput.click());
     $("#settingsBtn").addEventListener("click", openSettings);
+    $("#ledgerBtn").addEventListener("click", openLedger);
     $("#qqGroupBtn").addEventListener("click", () => openSheet(elements.qqGroupSheet));
     $("#qqCopyBtn").addEventListener("click", (event) => {
       triggerButtonPress(event.currentTarget);
@@ -1113,7 +1358,12 @@
       });
     });
 
-    [elements.profileSheet, elements.settingsSheet, elements.qqGroupSheet].forEach((backdrop) => {
+    [
+      elements.profileSheet,
+      elements.settingsSheet,
+      elements.qqGroupSheet,
+      elements.ledgerSheet,
+    ].forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
         if (event.target === backdrop) closeSheet(backdrop);
       });
