@@ -6,6 +6,9 @@
   const DB_VERSION = 1;
   const UNDO_MS = 5000;
   const DEFAULT_NICKNAME = "像素冒险者";
+  const QQ_GROUP_UIN = "1124909778";
+  const QQ_GROUP_JOIN_URL =
+    "https://qun.qq.com/universal-share/share?ac=1&authKey=NcYpwsw0uyoFEvfs9K2U0pbty1aFJLvkQXB1WnvvOnZCPSvzCZwEphqSlFLl6wyi&busi_data=eyJncm91cENvZGUiOiIxMTI0OTA5Nzc4IiwidG9rZW4iOiJXQUZ6VVRtQmJOMnNJTTFiN2I0S2hQR1JiclgwVksxTWROSi8wVldZVmR6a016RFpNNjM5NTU0Q2hUdmFPN0tsIiwidWluIjoiMTYzNDM2NTAxOCJ9&data=RAJFbnazxsLdojQkwFPLDWRy45IJE61AEZPZvLGCa1pr1G0BoThgG3AXuHnVre6ylk5h6p8rtADBwgggG83gBA&svctype=4&tempid=h5_group_info";
 
   const THEMES = [
     { id: "blue", name: "经典蓝", swatch: "#2f7dff", accent: "#2f7dff", strong: "#1f6bff", soft: "#eaf3ff" },
@@ -45,6 +48,7 @@
     formulaTotal: $("#formulaTotal"),
     profileSheet: $("#profileSheet"),
     settingsSheet: $("#settingsSheet"),
+    qqGroupSheet: $("#qqGroupSheet"),
     profileAvatarImage: $("#profileAvatarImage"),
     profileAvatarFallback: $("#profileAvatarFallback"),
     nicknameInput: $("#nicknameInput"),
@@ -463,36 +467,25 @@
   }
 
   function renderAssistant() {
-    const chest = data.current.chest;
-    const diamond = data.current.diamond;
-    const now = Date.now();
-    const chestReady = chest && now >= chest.expectedAt;
-    const diamondReady = diamond && now >= diamond.expectedAt;
+    const start = dateStartFor("day");
+    const todayEvents = events.filter(
+      (event) => Number(event.claimedAt) >= start && Number(event.claimedAt) <= Date.now()
+    );
+    const chestEvents = todayEvents.filter((event) => event.type === "chest");
+    const diamondEvents = todayEvents.filter((event) => event.type === "diamond");
+    const chestDiamonds = chestEvents.reduce(
+      (total, event) => total + ([0, 1, 2].includes(Number(event.reward)) ? Number(event.reward) : 1),
+      0
+    );
+    const totalDiamonds = chestDiamonds + diamondEvents.length * 2;
 
-    if (chestReady && diamondReady) {
+    if (!todayEvents.length) {
       elements.assistantText.textContent =
-        "宝箱和钻石都可以领取啦，先去游戏里收下，再回来点“下一个”。";
-      return;
-    }
-    if (chestReady) {
-      elements.assistantText.textContent =
-        "宝箱已经到领取时间了，钻石还在计时中。别忘了去游戏里看一眼。";
-      return;
-    }
-    if (diamondReady) {
-      elements.assistantText.textContent =
-        "钻石奖励已经可以领取了，宝箱还没有到时间。可以先收钻石。";
-      return;
-    }
-    if (chest || diamond) {
-      const parts = [];
-      if (chest) parts.push(`宝箱 ${formatTime(chest.expectedAt)}`);
-      if (diamond) parts.push(`钻石 ${formatTime(diamond.expectedAt)}`);
-      elements.assistantText.textContent = `我记下了：${parts.join("，")} 可领取。到时候回来看看，别错过啦。`;
+        "今天还没有领取记录。领完奖励后点一下“下一个”，我来帮你统计今日收获。";
       return;
     }
     elements.assistantText.textContent =
-      "领完奖励后点一下“下一个”，我会把下一次可领取时间记在这本手账里。";
+      `今日已领宝箱 ${chestEvents.length} 次、钻石奖励 ${diamondEvents.length} 次，共收获 ${totalDiamonds} 钻石。继续加油！`;
   }
 
   function renderStats() {
@@ -558,6 +551,14 @@
     toastTimer = window.setTimeout(() => {
       elements.toast.classList.remove("show");
     }, 2200);
+  }
+
+  function triggerButtonPress(button) {
+    if (!button) return;
+    button.classList.remove("is-pressing");
+    void button.offsetWidth;
+    button.classList.add("is-pressing");
+    window.setTimeout(() => button.classList.remove("is-pressing"), 220);
   }
 
   function makeClaim(kind, now) {
@@ -819,6 +820,135 @@
     showToast("设置已保存，新间隔从下次领取开始生效");
   }
 
+  function copyTextSync(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.width = "1px";
+    textarea.style.height = "1px";
+    textarea.style.padding = "0";
+    textarea.style.border = "none";
+    textarea.style.outline = "none";
+    textarea.style.background = "transparent";
+    textarea.style.fontSize = "16px";
+    let copied = false;
+    try {
+      document.body.appendChild(textarea);
+      const range = document.createRange();
+      range.selectNodeContents(textarea);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      textarea.setSelectionRange(0, text.length);
+      copied = document.execCommand("copy");
+    } catch (error) {
+      copied = false;
+    }
+    textarea.remove();
+    return copied;
+  }
+
+  async function copyText(text) {
+    if (copyTextSync(text)) return true;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function openQqGroupCard() {
+    const userAgent = navigator.userAgent || "";
+    const inQQ = /QQ\//i.test(userAgent) || /QQBrowser/i.test(userAgent);
+    const inWeChat = /MicroMessenger/i.test(userAgent);
+    const android = /Android/i.test(userAgent);
+    const cardUrl =
+      `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${QQ_GROUP_UIN}&card_type=group&source=qrcode`;
+    const cardUrlExternal =
+      `mqqapi://card/show_pslcard?src_type=internal&version=1&uin=${QQ_GROUP_UIN}&card_type=group&source=external`;
+    const intentUrl =
+      `intent://card/show_pslcard?src_type=internal&version=1&uin=${QQ_GROUP_UIN}&card_type=group&source=qrcode#Intent;scheme=mqqapi;package=com.tencent.mobileqq;end`;
+    const primary = inQQ
+      ? QQ_GROUP_JOIN_URL || cardUrl
+      : inWeChat
+        ? QQ_GROUP_JOIN_URL || cardUrl
+        : android
+          ? intentUrl
+          : QQ_GROUP_JOIN_URL || cardUrl;
+    const fallback = QQ_GROUP_JOIN_URL || (inQQ ? cardUrlExternal : cardUrl);
+    let opened = false;
+
+    const markOpened = () => {
+      opened = true;
+    };
+    const openViaFrame = (url) => {
+      const frame = document.createElement("iframe");
+      frame.style.display = "none";
+      frame.src = url;
+      document.body.appendChild(frame);
+      window.setTimeout(() => frame.remove(), 900);
+    };
+    const openViaLink = (url) => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      window.setTimeout(() => link.remove(), 900);
+    };
+
+    window.addEventListener("pagehide", markOpened, { once: true });
+    window.addEventListener("blur", markOpened, { once: true });
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden) markOpened();
+      },
+      { once: true }
+    );
+
+    try {
+      window.location.href = primary;
+    } catch (error) {
+      openViaFrame(primary);
+    }
+
+    window.setTimeout(() => {
+      if (opened || document.hidden) return;
+      if (inWeChat && !QQ_GROUP_JOIN_URL) {
+        showToast("微信内无法直接跳转 QQ，请用浏览器打开");
+        return;
+      }
+      try {
+        if (inQQ) openViaFrame(fallback);
+        else if (android) window.location.href = fallback;
+        else openViaLink(fallback);
+      } catch (error) {
+        // Ignore browser scheme restrictions after the automatic fallback.
+      }
+    }, 700);
+  }
+
+  async function joinQqGroup() {
+    const copied = await copyText(QQ_GROUP_UIN);
+    if (!copied) {
+      showToast("复制失败，请长按群号手动复制");
+      return;
+    }
+    closeSheet(elements.qqGroupSheet);
+    showToast("QQ群号已复制，正在打开群名片");
+    openQqGroupCard();
+  }
+
   async function resetAllData() {
     if (!window.confirm("将清空昵称、头像、设置和全部领取记录，且无法撤销。确定继续吗？")) {
       return;
@@ -897,9 +1027,15 @@
 
   function bindEvents() {
     $$("[data-claim]").forEach((button) => {
-      button.addEventListener("click", () => claimSingle(button.dataset.claim));
+      button.addEventListener("click", () => {
+        triggerButtonPress(button);
+        claimSingle(button.dataset.claim);
+      });
     });
-    elements.claimBothBtn.addEventListener("click", claimBoth);
+    elements.claimBothBtn.addEventListener("click", () => {
+      triggerButtonPress(elements.claimBothBtn);
+      claimBoth();
+    });
 
     document.addEventListener("click", (event) => {
       const quantity = event.target.closest("[data-quantity]");
@@ -932,6 +1068,11 @@
     $("#profileBtn").addEventListener("click", openProfile);
     $("#avatarPickBtn").addEventListener("click", () => elements.avatarInput.click());
     $("#settingsBtn").addEventListener("click", openSettings);
+    $("#qqGroupBtn").addEventListener("click", () => openSheet(elements.qqGroupSheet));
+    $("#qqCopyBtn").addEventListener("click", (event) => {
+      triggerButtonPress(event.currentTarget);
+      joinQqGroup();
+    });
 
     elements.avatarInput.addEventListener("change", async (event) => {
       const file = event.target.files?.[0];
@@ -972,7 +1113,7 @@
       });
     });
 
-    [elements.profileSheet, elements.settingsSheet].forEach((backdrop) => {
+    [elements.profileSheet, elements.settingsSheet, elements.qqGroupSheet].forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
         if (event.target === backdrop) closeSheet(backdrop);
       });

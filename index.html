@@ -74,10 +74,15 @@
               <span id="todayLabel"></span>
             </span>
           </button>
-          <span class="local-badge">
-            <span class="local-dot"></span>
-            仅存本机
-          </span>
+          <button class="join-group-button" id="qqGroupBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M8.4 11.1a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" />
+              <path d="M15.9 10.4a2.6 2.6 0 1 0 0-5.2" />
+              <path d="M2.9 19.5v-1.1a5.5 5.5 0 0 1 5.5-5.5 5.5 5.5 0 0 1 5.5 5.5v1.1" />
+              <path d="M14 13.4a4.4 4.4 0 0 1 7 3.6v2.5" />
+            </svg>
+            一键加群
+          </button>
         </section>
 
         <section class="assistant-card" aria-label="像素小助手">
@@ -237,9 +242,6 @@
           </div>
         </section>
 
-        <p class="privacy-footnote">
-          所有昵称、头像和领取记录仅保存在当前手机，不会上传到服务器。
-        </p>
       </main>
     </div>
 
@@ -332,6 +334,28 @@
         </div>
 
         <button class="primary-wide" id="saveSettingsBtn" type="button">保存设置</button>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop qq-group-backdrop" id="qqGroupSheet" role="dialog" aria-modal="true" aria-labelledby="qqGroupSheetTitle">
+      <section class="sheet qq-group-sheet">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <span class="section-kicker">COMMUNITY</span>
+            <h2 id="qqGroupSheetTitle">加入官方 QQ 群</h2>
+          </div>
+          <button class="sheet-close" type="button" data-close-sheet="qqGroupSheet" aria-label="关闭">×</button>
+        </div>
+        <p class="qq-group-copy">复制群号后会自动尝试打开 QQ 群名片。</p>
+        <div class="qq-number-box">
+          <span>QQ 群号</span>
+          <strong>1124909778</strong>
+        </div>
+        <button class="primary-wide qq-copy-button" id="qqCopyBtn" type="button">
+          复制群号并加群
+        </button>
+        <button class="sheet-cancel-button" type="button" data-close-sheet="qqGroupSheet">取消</button>
       </section>
     </div>
 
