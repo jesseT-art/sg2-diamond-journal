@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN" data-mode="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#eef6ff" />
+    <meta
+      name="description"
+      content="像素生存者2钻石手账：在手机本地记录宝箱和钻石奖励的下一次领取时间。"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="钻石手账" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>像素生存者2 钻石手账</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
+    <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one" aria-hidden="true"></div>
+    <div class="ambient ambient-two" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <img
+            class="brand-mark"
+            src="./assets/app-icon-192.png"
+            alt=""
+            aria-hidden="true"
+          />
+          <div class="brand-copy">
+            <span class="eyebrow">像素生存者2</span>
+            <h1>钻石手账</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <img
+            class="platform-logo logo-light"
+            src="./assets/platform-logo-blue.png"
+            alt="SG.像素2"
+          />
+          <img
+            class="platform-logo logo-dark"
+            src="./assets/platform-logo-white.png"
+            alt="SG.像素2"
+          />
+          <button
+            class="icon-button"
+            id="settingsBtn"
+            type="button"
+            aria-label="打开设置"
+            title="设置"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h9M18 7h2M4 17h2M11 17h9" />
+              <circle cx="16" cy="7" r="2.2" />
+              <circle cx="8" cy="17" r="2.2" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="user-strip" aria-label="个人信息">
+          <button class="profile-button" id="profileBtn" type="button">
+            <span class="avatar" id="headerAvatar">
+              <img id="headerAvatarImage" alt="" hidden />
+              <span id="headerAvatarFallback">像</span>
+            </span>
+            <span class="profile-copy">
+              <strong id="headerNickname">像素冒险者</strong>
+              <span id="todayLabel"></span>
+            </span>
+          </button>
+          <span class="local-badge">
+            <span class="local-dot"></span>
+            仅存本机
+          </span>
+        </section>
+
+        <section class="reward-grid" aria-label="奖励领取记录">
+          <article class="reward-card chest-card" data-kind="chest">
+            <div class="card-topline">
+              <span class="reward-kicker">宝箱</span>
+              <span class="interval-label" id="chestIntervalLabel">每 60 分钟</span>
+            </div>
+            <div class="reward-art">
+              <span class="art-glow"></span>
+              <img
+                class="pixel-sprite"
+                src="./assets/chest.png"
+                alt="宝箱"
+                draggable="false"
+              />
+            </div>
+            <div class="availability" id="chestAvailability">
+              <strong class="availability-main">尚未记录</strong>
+              <span class="availability-sub">点击“已领取”记录当前时间</span>
+            </div>
+            <button class="claim-button" type="button" data-claim="chest">
+              已领取
+            </button>
+            <div class="card-feedback" id="chestFeedback" aria-live="polite"></div>
+          </article>
+
+          <article class="reward-card diamond-card" data-kind="diamond">
+            <div class="card-topline">
+              <span class="reward-kicker">钻石奖励</span>
+              <span class="interval-label" id="diamondIntervalLabel">每 30 分钟</span>
+            </div>
+            <div class="reward-art">
+              <span class="art-glow"></span>
+              <img
+                class="pixel-sprite diamond-sprite"
+                src="./assets/diamond.png"
+                alt="钻石"
+                draggable="false"
+              />
+            </div>
+            <div class="availability" id="diamondAvailability">
+              <strong class="availability-main">尚未记录</strong>
+              <span class="availability-sub">点击“已领取”记录当前时间</span>
+            </div>
+            <button class="claim-button" type="button" data-claim="diamond">
+              已领取
+            </button>
+            <div
+              class="card-feedback"
+              id="diamondFeedback"
+              aria-live="polite"
+            ></div>
+          </article>
+        </section>
+
+        <section class="combined-area">
+          <button class="combined-button" id="claimBothBtn" type="button">
+            <span class="combined-icon" aria-hidden="true">✓</span>
+            两个都已领取，一起记录
+          </button>
+          <div class="combined-feedback" id="combinedFeedback" aria-live="polite"></div>
+        </section>
+
+        <section class="stats-card" aria-labelledby="statsTitle">
+          <div class="section-heading">
+            <div>
+              <span class="section-kicker">DIAMOND JOURNAL</span>
+              <h2 id="statsTitle">钻石收获</h2>
+            </div>
+            <span class="stats-note">按本机时间统计</span>
+          </div>
+
+          <div class="segmented" role="tablist" aria-label="统计周期">
+            <button
+              class="segment active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              data-period="day"
+            >
+              本日
+            </button>
+            <button
+              class="segment"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              data-period="week"
+            >
+              本周
+            </button>
+            <button
+              class="segment"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              data-period="month"
+            >
+              本月
+            </button>
+          </div>
+
+          <div class="total-panel">
+            <div class="total-copy">
+              <span id="periodLabel">本日合计</span>
+              <strong><span id="totalDiamonds">0</span><small>钻石</small></strong>
+            </div>
+            <div class="total-emblem" aria-hidden="true">
+              <img src="./assets/diamond.png" alt="" />
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-item">
+              <span class="stat-label">宝箱领取</span>
+              <strong><span id="chestCount">0</span><small>次</small></strong>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">钻石奖励</span>
+              <strong><span id="diamondCount">0</span><small>次</small></strong>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">宝箱开出</span>
+              <strong><span id="chestDiamonds">0</span><small>颗</small></strong>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">固定奖励</span>
+              <strong><span id="fixedDiamonds">0</span><small>颗</small></strong>
+            </div>
+          </div>
+
+          <div class="stats-formula">
+            <span>宝箱收益</span>
+            <b>+</b>
+            <span>钻石奖励次数 × 2</span>
+            <b>=</b>
+            <strong id="formulaTotal">0 钻石</strong>
+          </div>
+        </section>
+
+        <p class="privacy-footnote">
+          所有昵称、头像和领取记录仅保存在当前手机，不会上传到服务器。
+        </p>
+      </main>
+    </div>
+
+    <div class="sheet-backdrop" id="profileSheet" role="dialog" aria-modal="true" aria-labelledby="profileSheetTitle">
+      <section class="sheet">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <span class="section-kicker">PERSONAL</span>
+            <h2 id="profileSheetTitle">个人资料</h2>
+          </div>
+          <button class="sheet-close" type="button" data-close-sheet="profileSheet" aria-label="关闭">×</button>
+        </div>
+        <div class="profile-editor">
+          <button class="avatar avatar-large" id="avatarPickBtn" type="button" aria-label="选择头像">
+            <img id="profileAvatarImage" alt="" hidden />
+            <span id="profileAvatarFallback">像</span>
+            <span class="avatar-edit" aria-hidden="true">+</span>
+          </button>
+          <input id="avatarInput" type="file" accept="image/*" hidden />
+          <label class="field">
+            <span>昵称</span>
+            <input id="nicknameInput" type="text" maxlength="16" autocomplete="nickname" />
+          </label>
+        </div>
+        <p class="field-hint">头像会自动压缩后保存在本机。</p>
+        <button class="primary-wide" id="saveProfileBtn" type="button">保存个人资料</button>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsSheetTitle">
+      <section class="sheet sheet-tall">
+        <div class="sheet-handle" aria-hidden="true"></div>
+        <div class="sheet-header">
+          <div>
+            <span class="section-kicker">SETTINGS</span>
+            <h2 id="settingsSheetTitle">设置</h2>
+          </div>
+          <button class="sheet-close" type="button" data-close-sheet="settingsSheet" aria-label="关闭">×</button>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-heading">
+            <h3>刷新间隔</h3>
+            <span>修改后从下一次领取开始生效</span>
+          </div>
+          <div class="duration-grid">
+            <label class="field field-with-suffix">
+              <span>宝箱</span>
+              <div>
+                <input id="chestDurationInput" type="number" min="1" max="1440" inputmode="numeric" />
+                <em>分钟</em>
+              </div>
+            </label>
+            <label class="field field-with-suffix">
+              <span>钻石</span>
+              <div>
+                <input id="diamondDurationInput" type="number" min="1" max="1440" inputmode="numeric" />
+                <em>分钟</em>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-heading">
+            <h3>主题配色</h3>
+            <span>会保存在当前手机</span>
+          </div>
+          <div class="theme-grid" id="themeGrid"></div>
+          <label class="toggle-row">
+            <span>
+              <strong>深色模式</strong>
+              <small>适合夜间查看</small>
+            </span>
+            <input id="darkModeToggle" type="checkbox" />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-heading">
+            <h3>本地数据</h3>
+            <span>换手机前建议先导出备份</span>
+          </div>
+          <div class="settings-actions">
+            <button class="settings-action" id="exportBtn" type="button">导出备份</button>
+            <button class="settings-action" id="importBtn" type="button">导入备份</button>
+            <input id="importInput" type="file" accept="application/json,.json" hidden />
+            <button class="settings-action" id="installBtn" type="button">添加到桌面</button>
+            <button class="settings-action danger" id="resetBtn" type="button">清空本地数据</button>
+          </div>
+        </div>
+
+        <button class="primary-wide" id="saveSettingsBtn" type="button">保存设置</button>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
