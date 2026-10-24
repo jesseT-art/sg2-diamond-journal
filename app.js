@@ -301,7 +301,7 @@
     rootStyle.setProperty("--button-edge", colorMix(strong, "#071d43", 0.4));
     rootStyle.setProperty("--on-accent", luminance(accent) > 174 ? "#14243c" : "#ffffff");
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", dark ? "#081324" : "#edf5ff");
+    if (meta) meta.setAttribute("content", accent);
     renderThemeGrid();
   }
 

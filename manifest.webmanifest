@@ -9,7 +9,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#edf5ff",
-  "theme_color": "#edf5ff",
+  "theme_color": "#2f7dff",
   "categories": ["games", "utilities", "productivity"],
   "icons": [
     {

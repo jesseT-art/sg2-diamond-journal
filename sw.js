@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "sg2-diamond-journal-v3";
+const CACHE_NAME = "sg2-diamond-journal-v4";
 const APP_SHELL = [
   "./",
   "./index.html",
