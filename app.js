@@ -141,7 +141,7 @@
           claimedAt: Number(current.claimedAt),
           expectedAt: Number(current.expectedAt),
           duration: Number(current.duration) || result.settings.durations[kind],
-          reward: kind === "diamond" ? 2 : [0, 1, 2].includes(Number(current.reward)) ? Number(current.reward) : 1,
+          reward: kind === "diamond" ? 2 : [0, 1, 2].includes(Number(current.reward)) ? Number(current.reward) : 2,
           eventId: String(current.eventId || ""),
         };
       }
@@ -790,7 +790,7 @@
   function makeClaim(kind, now) {
     const duration = clampDuration(data.settings.durations[kind], kind === "chest" ? 60 : 30);
     const id = uid(kind);
-    const reward = kind === "diamond" ? 2 : 1;
+    const reward = 2;
     return {
       event: {
         id,
@@ -866,7 +866,7 @@
     saveData();
     renderAll();
     launchCelebration(button);
-    showToast("宝箱和钻石都已记录，宝箱收益默认按 1 钻石计算");
+    showToast("宝箱和钻石都已记录，宝箱收益默认按 2 钻石计算");
     try {
       await Promise.all([putEvent(chestClaim.event), putEvent(diamondClaim.event)]);
     } catch (error) {
@@ -876,7 +876,7 @@
   }
 
   async function setChestReward(value) {
-    const reward = [0, 1, 2].includes(Number(value)) ? Number(value) : 1;
+    const reward = [0, 1, 2].includes(Number(value)) ? Number(value) : 2;
     const current = data.current.chest;
     if (!current) return;
     const event = events.find((item) => item.id === current.eventId);
@@ -1390,9 +1390,29 @@
     });
   }
 
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
+
+    const register = () => {
+      navigator.serviceWorker
+        .register("./sw.js?v=7", { updateViaCache: "none" })
+        .then((registration) => registration.update())
+        .catch((error) => {
+          console.warn("Service Worker 注册失败。", error);
+        });
+    };
+
+    if (document.readyState === "complete") {
+      register();
+    } else {
+      window.addEventListener("load", register, { once: true });
+    }
+  }
+
   async function init() {
     applyTheme();
     bindEvents();
+    registerServiceWorker();
     try {
       events = await getAllEvents();
     } catch (error) {
@@ -1409,13 +1429,6 @@
       renderAssistant();
     }, 30000);
 
-    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch((error) => {
-          console.warn("Service Worker 注册失败。", error);
-        });
-      });
-    }
   }
 
   init();
