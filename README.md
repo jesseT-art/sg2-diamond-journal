@@ -11,6 +11,10 @@
 - 任意连续 60 秒内最多记录 6 钻石，避免重复点击造成误差
 - 单领和双领均支持 5 秒内撤回
 - 本日、本周、本月收益统计
+- 奖励与数据双页面底部导航
+- 7 天与 30 天每日数据趋势和折线分析
+- 点击折线节点查看当天收益构成与环比变化
+- 连续记录天数和 7 日移动平均趋势
 - 点击钻石统计卡查看明细并删除错误记录
 - 昵称和头像保存在本机
 - 9 套主题色、深色模式
@@ -57,10 +61,10 @@ iPhone 使用 Safari 打开 HTTPS 地址，点击分享按钮，选择“添加�
 
 ## 更新注意
 
-每次正式发布界面或脚本更新时，必须同步提升资源版本号，例如从 `v7` 改为 `v8`：
+每次正式发布界面或脚本更新时，必须同步提升资源版本号，例如从 `v8` 改为 `v9`：
 
-- `index.html` 中的 `styles.css?v=7`、`app.js?v=7` 和 `manifest.webmanifest?v=7`
-- `app.js` 中 Service Worker 的 `sw.js?v=7`
+- `index.html` 中的 `styles.css?v=8`、`app.js?v=8` 和 `manifest.webmanifest?v=8`
+- `app.js` 中 Service Worker 的 `sw.js?v=8`
 - `sw.js` 中的 `CACHE_NAME` 和 `APP_SHELL` 资源地址
 
 所有位置必须使用同一个版本号。这样可以避免已安装用户第一次打开时，出现新 HTML 搭配旧 CSS/JS 的界面错乱。`localStorage` 和 `IndexedDB` 不需要清理，程序资源缓存更新不会删除用户记录。

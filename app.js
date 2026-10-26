@@ -54,6 +54,10 @@
     celebrationCanvas: $("#celebrationCanvas"),
     profileAvatarImage: $("#profileAvatarImage"),
     profileAvatarFallback: $("#profileAvatarFallback"),
+    pageAvatarImage: $("#pageAvatarImage"),
+    pageAvatarFallback: $("#pageAvatarFallback"),
+    pageNickname: $("#pageNickname"),
+    pageTodayLabel: $("#pageTodayLabel"),
     nicknameInput: $("#nicknameInput"),
     avatarInput: $("#avatarInput"),
     chestDurationInput: $("#chestDurationInput"),
@@ -62,7 +66,21 @@
     themeGrid: $("#themeGrid"),
     installBtn: $("#installBtn"),
     toast: $("#toast"),
-    claimBothBtn: $("#claimBothBtn"),
+    dailyStrip: $("#dailyStrip"),
+    trendChart: $("#trendChart"),
+    trendEmpty: $("#trendEmpty"),
+    trendAverage: $("#trendAverage"),
+    trendAverageLabel: $("#trendAverageLabel"),
+    trendBest: $("#trendBest"),
+    trendStreak: $("#trendStreak"),
+    trendAnalysis: $("#trendAnalysis"),
+    trendEyebrow: $("#trendEyebrow"),
+    chartHint: $("#chartHint"),
+    pointDate: $("#pointDate"),
+    pointTotal: $("#pointTotal"),
+    pointChest: $("#pointChest"),
+    pointDiamond: $("#pointDiamond"),
+    pointDelta: $("#pointDelta"),
   };
 
   let dbPromise = null;
@@ -82,6 +100,8 @@
     undo: { chest: null, diamond: null },
     batchUndo: null,
     period: "day",
+    selectedDayOffset: 0,
+    trendRange: 7,
   };
 
   function defaultData() {
@@ -325,6 +345,105 @@
     return date.getTime();
   }
 
+  function dayStartForOffset(offset = 0) {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - offset);
+    return date.getTime();
+  }
+
+  function periodRange(period, dayOffset = runtime.selectedDayOffset) {
+    const now = Date.now();
+    if (period === "day") {
+      const start = dayStartForOffset(dayOffset);
+      return { start, end: start + 86400000 };
+    }
+    return { start: dateStartFor(period), end: now + 1 };
+  }
+
+  function eventReward(event) {
+    const reward = Number(event?.reward);
+    if (Number.isFinite(reward)) return reward;
+    return event?.type === "diamond" ? 2 : 1;
+  }
+
+  function eventsInRange(sourceEvents, range) {
+    return sourceEvents.filter(
+      (event) =>
+        Number(event.claimedAt) >= range.start && Number(event.claimedAt) < range.end
+    );
+  }
+
+  function trendDays(range = runtime.trendRange) {
+    return Array.from({ length: range }, (_, index) => {
+      const offset = range - 1 - index;
+      const start = dayStartForOffset(offset);
+      const dayEvents = eventsInRange(events, { start, end: start + 86400000 });
+      return {
+        offset,
+        start,
+        total: dayEvents.reduce((sum, event) => sum + eventReward(event), 0),
+        count: dayEvents.length,
+      };
+    });
+  }
+
+  function dayDetail(day) {
+    const start = day.start;
+    const dayEvents = eventsInRange(events, { start, end: start + 86400000 });
+    return {
+      chest: dayEvents
+        .filter((event) => event.type === "chest")
+        .reduce((sum, event) => sum + eventReward(event), 0),
+      diamond: dayEvents
+        .filter((event) => event.type === "diamond")
+        .reduce((sum, event) => sum + eventReward(event), 0),
+    };
+  }
+
+  function consecutiveRecordDays() {
+    let count = 0;
+    for (let offset = 0; offset < 366; offset += 1) {
+      const start = dayStartForOffset(offset);
+      const hasRecord = events.some(
+        (event) =>
+          Number(event.claimedAt) >= start && Number(event.claimedAt) < start + 86400000
+      );
+      if (!hasRecord) break;
+      count += 1;
+    }
+    return count;
+  }
+
+  function renderPointDetail(days) {
+    const selected =
+      days.find((day) => day.offset === runtime.selectedDayOffset) || days[days.length - 1];
+    const detail = dayDetail(selected);
+    const previousStart = selected.start - 86400000;
+    const previousEvents = eventsInRange(events, {
+      start: previousStart,
+      end: previousStart + 86400000,
+    });
+    const previousTotal = previousEvents.reduce((sum, event) => sum + eventReward(event), 0);
+    const delta = selected.total - previousTotal;
+    const dateLabel = new Intl.DateTimeFormat("zh-CN", {
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    }).format(new Date(selected.start));
+
+    elements.pointDate.textContent = selected.offset === 0 ? `今天 · ${dateLabel}` : dateLabel;
+    elements.pointTotal.innerHTML = `${selected.total} <small>钻石</small>`;
+    elements.pointChest.textContent = String(detail.chest);
+    elements.pointDiamond.textContent = String(detail.diamond);
+    elements.pointDelta.textContent =
+      delta > 0
+        ? `较前一天 +${delta}`
+        : delta < 0
+          ? `较前一天 ${delta}`
+          : "与前一天持平";
+  }
+
   function formatTime(timestamp) {
     return new Intl.DateTimeFormat("zh-CN", {
       hour: "2-digit",
@@ -363,22 +482,33 @@
   }
 
   function renderDateHeader() {
-    elements.todayLabel.textContent = new Intl.DateTimeFormat("zh-CN", {
+    const label = new Intl.DateTimeFormat("zh-CN", {
       month: "long",
       day: "numeric",
       weekday: "short",
     }).format(new Date());
+    elements.todayLabel.textContent = label;
+    if (elements.pageTodayLabel) elements.pageTodayLabel.textContent = label;
   }
 
   function renderProfile() {
     elements.headerNickname.textContent = data.profile.nickname;
+    if (elements.pageNickname) elements.pageNickname.textContent = data.profile.nickname;
     elements.nicknameInput.value = data.profile.nickname;
     setAvatarSources(avatarUrl || pendingAvatarUrl);
   }
 
   function setAvatarSources(url) {
-    const images = [elements.headerAvatarImage, elements.profileAvatarImage];
-    const fallbacks = [elements.headerAvatarFallback, elements.profileAvatarFallback];
+    const images = [
+      elements.headerAvatarImage,
+      elements.profileAvatarImage,
+      elements.pageAvatarImage,
+    ].filter(Boolean);
+    const fallbacks = [
+      elements.headerAvatarFallback,
+      elements.profileAvatarFallback,
+      elements.pageAvatarFallback,
+    ].filter(Boolean);
     images.forEach((image) => {
       if (url) {
         image.src = url;
@@ -479,18 +609,33 @@
 
     if (!parts.length && !undoButtons.length) {
       elements.actionDock.innerHTML = `
-        <div class="action-dock-idle">
-          <span class="action-dock-mark">+</span>
-          <span>领取后可在这里选择本次钻石收益或撤回记录</span>
-        </div>
+        <button
+          class="combined-button dock-combined-button"
+          id="claimBothBtn"
+          type="button"
+          data-claim-both
+        >
+          <span class="combined-icon" aria-hidden="true">✓</span>
+          <span>两边都领了，一起记录</span>
+          <span class="combined-spark" aria-hidden="true">✦</span>
+        </button>
       `;
       return;
     }
 
     const recentTotal = diamondTotalInWindow(events, now);
+    const completionLabel = runtime.batchUndo
+      ? "宝箱和钻石已一起记录"
+      : runtime.undo.chest
+        ? "宝箱记录已更新"
+        : "钻石奖励已记录";
+    const completion = parts.length
+      ? ""
+      : `<div class="dock-complete"><span>✓</span>${completionLabel}</div>`;
     elements.actionDock.innerHTML = `
       <div class="action-dock-content">
         ${parts.join("")}
+        ${completion}
         <div class="action-dock-meta">
           <span class="rolling-limit">近 60 秒 ${recentTotal}/6 钻石</span>
           <div class="undo-actions">${undoButtons.join("")}</div>
@@ -522,21 +667,25 @@
   }
 
   function renderStats() {
-    const start = dateStartFor(runtime.period);
-    const periodEvents = events.filter(
-      (event) => Number(event.claimedAt) >= start && Number(event.claimedAt) <= Date.now()
-    );
+    const range = periodRange(runtime.period);
+    const periodEvents = eventsInRange(events, range);
     const chestEvents = periodEvents.filter((event) => event.type === "chest");
     const diamondEvents = periodEvents.filter((event) => event.type === "diamond");
     const chestDiamonds = chestEvents.reduce(
-      (total, event) => total + ([0, 1, 2].includes(Number(event.reward)) ? Number(event.reward) : 1),
+      (total, event) => total + eventReward(event),
       0
     );
     const fixedDiamonds = diamondEvents.length * 2;
     const total = chestDiamonds + fixedDiamonds;
 
     elements.periodLabel.textContent =
-      runtime.period === "day" ? "本日合计" : runtime.period === "week" ? "本周合计" : "本月合计";
+      runtime.period === "day"
+        ? runtime.selectedDayOffset === 0
+          ? "今日合计"
+          : `${formatDate(range.start)}合计`
+        : runtime.period === "week"
+          ? "本周合计"
+          : "本月合计";
     elements.totalDiamonds.textContent = String(total);
     elements.chestCount.textContent = String(chestEvents.length);
     elements.diamondCount.textContent = String(diamondEvents.length);
@@ -545,16 +694,231 @@
     elements.formulaTotal.textContent = `${total} 钻石`;
   }
 
+  function renderDailyTrend() {
+    if (!elements.dailyStrip || !elements.trendChart) return;
+    const range = runtime.trendRange;
+    const days = trendDays(range);
+    elements.trendChart.closest(".trend-card").classList.toggle("is-month-view", range === 30);
+
+    const weekday = new Intl.DateTimeFormat("zh-CN", { weekday: "short" });
+    elements.dailyStrip.hidden = range === 30;
+    elements.dailyStrip.classList.toggle("is-month", range === 30);
+    elements.trendEyebrow.textContent = `LAST ${range} DAYS`;
+    elements.trendAverageLabel.textContent = `近 ${range} 日日均`;
+    elements.trendEmpty.textContent = `最近 ${range} 天还没有数据，领取一次后会在这里形成趋势。`;
+    elements.trendChart.setAttribute(
+      "aria-label",
+      `最近 ${range} 天每日钻石收益折线图`
+    );
+    elements.chartHint.textContent =
+      range === 30
+        ? "整月数据已压缩在同一坐标轴，点击节点查看当天详情"
+        : "点击折线节点，查看当天详情";
+    elements.dailyStrip.innerHTML = days
+      .map((day) => {
+        const date = new Date(day.start);
+        const dayName =
+          day.offset === 0
+            ? "今天"
+            : range > 7
+              ? `${date.getMonth() + 1}/${date.getDate()}`
+              : weekday.format(date);
+        return `
+          <button
+            class="day-chip${runtime.period === "day" && runtime.selectedDayOffset === day.offset ? " active" : ""}"
+            type="button"
+            data-day-offset="${day.offset}"
+            aria-label="${formatDate(day.start)}，${day.total} 钻石，${day.count} 条记录"
+          >
+            <span>${dayName}</span>
+            <strong>${day.total}</strong>
+            <small>钻石</small>
+          </button>
+        `;
+      })
+      .join("");
+
+    const total = days.reduce((sum, day) => sum + day.total, 0);
+    const average = Math.round((total / range) * 10) / 10;
+    const best = days.reduce((current, day) => (day.total > current.total ? day : current), days[0]);
+    elements.trendAverage.innerHTML = `${average} <small>钻石</small>`;
+    elements.trendBest.innerHTML = `${best.total} <small>钻石</small>`;
+    elements.trendStreak.innerHTML = `${consecutiveRecordDays()} <small>天</small>`;
+    renderPointDetail(days);
+
+    const today = days[days.length - 1];
+    const yesterday = days[days.length - 2];
+    const delta = today.total - yesterday.total;
+    const bestLabel =
+      best.total > 0 ? `${formatDate(best.start)}是近 ${range} 日最高点` : "继续积累数据";
+    const deltaText =
+      delta > 0
+        ? `比昨天多 ${delta} 钻石，保持这个节奏。`
+        : delta < 0
+          ? `比昨天少 ${Math.abs(delta)} 钻石，今天还有机会追回来。`
+          : "和昨天持平，领取节奏很稳定。";
+    elements.trendAnalysis.textContent = `近 ${range} 日共获得 ${total} 钻石；${bestLabel}。${deltaText}`;
+
+    const hasData = days.some((day) => day.count > 0);
+    elements.trendEmpty.hidden = hasData;
+    elements.trendChart.hidden = !hasData;
+    if (hasData) drawTrendChart(days);
+  }
+
+  function drawTrendChart(days) {
+    const canvas = elements.trendChart;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+    }
+
+    const context = canvas.getContext("2d");
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    const styles = getComputedStyle(document.documentElement);
+    const accent = styles.getPropertyValue("--accent").trim() || "#2f7dff";
+    const muted = styles.getPropertyValue("--muted").trim() || "#71839b";
+    const line = styles.getPropertyValue("--line").trim() || "rgba(62,124,199,.14)";
+    const surface = styles.getPropertyValue("--surface-solid").trim() || "#ffffff";
+    const success = styles.getPropertyValue("--success").trim() || "#0c9b76";
+    const maxValue = Math.max(4, ...days.map((day) => day.total));
+    const ceiling = Math.ceil(maxValue / 4) * 4;
+    const plot = { left: 28, right: width - 10, top: 15, bottom: height - 25 };
+    const plotWidth = plot.right - plot.left;
+    const plotHeight = plot.bottom - plot.top;
+    const xFor = (index) => plot.left + (plotWidth * index) / (days.length - 1);
+    const yFor = (value) => plot.bottom - (plotHeight * value) / ceiling;
+
+    context.font = '8px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    context.strokeStyle = line;
+    context.fillStyle = muted;
+    context.lineWidth = 1;
+
+    for (let step = 0; step <= 4; step += 1) {
+      const value = (ceiling / 4) * step;
+      const y = yFor(value);
+      context.beginPath();
+      context.setLineDash([3, 5]);
+      context.moveTo(plot.left, y);
+      context.lineTo(plot.right, y);
+      context.stroke();
+      context.fillText(String(Math.round(value)), plot.left - 7, y);
+    }
+    context.setLineDash([]);
+
+    context.textAlign = "center";
+    context.textBaseline = "top";
+    const weekday = new Intl.DateTimeFormat("zh-CN", { weekday: "short" });
+    days.forEach((day, index) => {
+      const showLabel =
+        days.length <= 7 ||
+        index === 0 ||
+        index === days.length - 1 ||
+        index % 5 === 0;
+      if (!showLabel) return;
+      const date = new Date(day.start);
+      const label =
+        day.offset === 0
+          ? "今天"
+          : days.length <= 7
+            ? weekday.format(date)
+            : `${date.getMonth() + 1}/${date.getDate()}`;
+      context.fillStyle = day.offset === runtime.selectedDayOffset ? accent : muted;
+      context.fillText(label, xFor(index), plot.bottom + 8);
+    });
+
+    const points = days.map((day, index) => ({
+      x: xFor(index),
+      y: yFor(day.total),
+      total: day.total,
+      offset: day.offset,
+    }));
+
+    const gradient = context.createLinearGradient(0, plot.top, 0, plot.bottom);
+    gradient.addColorStop(0, colorMix(accent, surface, 0.25));
+    gradient.addColorStop(1, colorMix(accent, surface, 0.96));
+    context.beginPath();
+    context.moveTo(points[0].x, plot.bottom);
+    points.forEach((point) => context.lineTo(point.x, point.y));
+    context.lineTo(points[points.length - 1].x, plot.bottom);
+    context.closePath();
+    context.fillStyle = gradient;
+    context.globalAlpha = 0.48;
+    context.fill();
+    context.globalAlpha = 1;
+
+    context.beginPath();
+    points.forEach((point, index) => {
+      if (index === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    });
+    context.strokeStyle = accent;
+    context.lineWidth = 2.5;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.stroke();
+
+    const trendValues =
+      days.length > 7
+        ? days.map((_, index) => {
+            const start = Math.max(0, index - 6);
+            const windowValues = days.slice(start, index + 1);
+            return windowValues.reduce((sum, day) => sum + day.total, 0) / windowValues.length;
+          })
+        : days.map(() => days.reduce((sum, day) => sum + day.total, 0) / days.length);
+    context.beginPath();
+    trendValues.forEach((value, index) => {
+      const x = xFor(index);
+      const y = yFor(value);
+      if (index === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    });
+    context.setLineDash(days.length > 7 ? [5, 5] : [7, 6]);
+    context.strokeStyle = success;
+    context.lineWidth = 1.6;
+    context.globalAlpha = 0.72;
+    context.stroke();
+    context.globalAlpha = 1;
+    context.setLineDash([]);
+
+    points.forEach((point) => {
+      const active = point.offset === runtime.selectedDayOffset;
+      context.beginPath();
+      context.arc(point.x, point.y, active ? 4.5 : days.length > 7 ? 1.8 : 2.7, 0, Math.PI * 2);
+      context.fillStyle = active ? accent : surface;
+      context.fill();
+      context.lineWidth = active ? 2.5 : 1.5;
+      context.strokeStyle = accent;
+      context.stroke();
+    });
+  }
+
+  function renderAnalytics() {
+    renderStats();
+    renderDailyTrend();
+  }
+
   function renderLedger() {
-    const start = dateStartFor(runtime.period);
-    const periodEvents = events
-      .filter(
-        (event) => Number(event.claimedAt) >= start && Number(event.claimedAt) <= Date.now()
-      )
+    const range = periodRange(runtime.period);
+    const periodEvents = eventsInRange(events, range)
       .sort((a, b) => b.claimedAt - a.claimedAt);
-    const total = periodEvents.reduce((sum, event) => sum + (Number(event.reward) || 0), 0);
+    const total = periodEvents.reduce((sum, event) => sum + eventReward(event), 0);
     const label =
-      runtime.period === "day" ? "本日" : runtime.period === "week" ? "本周" : "本月";
+      runtime.period === "day"
+        ? runtime.selectedDayOffset === 0
+          ? "今日"
+          : formatDate(range.start)
+        : runtime.period === "week"
+          ? "本周"
+          : "本月";
     elements.ledgerTitle.textContent = `${label}钻石记录`;
     elements.ledgerSummary.textContent = `${label}共获得 ${total} 钻石 · ${periodEvents.length} 条记录`;
 
@@ -606,7 +970,7 @@
     picker = null;
     saveData();
     renderActionDock();
-    renderStats();
+    renderAnalytics();
     renderAssistant();
     renderLedger();
     showToast("钻石记录已删除");
@@ -644,7 +1008,7 @@
     renderAvailability("diamond");
     renderActionDock();
     renderAssistant();
-    renderStats();
+    renderAnalytics();
   }
 
   function showToast(message) {
@@ -892,7 +1256,7 @@
     picker = null;
     saveData();
     renderActionDock();
-    renderStats();
+    renderAnalytics();
     showToast(`本次宝箱按 ${reward} 钻石记录`);
     if (event) {
       try {
@@ -964,6 +1328,45 @@
     if (!$$(".sheet-backdrop.open").length) {
       document.body.style.overflow = "";
     }
+  }
+
+  function showPage(pageName) {
+    const target = document.querySelector(`[data-page-view="${pageName}"]`);
+    if (!target) return;
+    $$("[data-page-view]").forEach((page) => {
+      page.hidden = page !== target;
+      page.classList.toggle("active", page === target);
+    });
+    $$("[data-nav-page]").forEach((button) => {
+      const active = button.dataset.navPage === pageName;
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    window.scrollTo({ top: 0, behavior: "auto" });
+    if (pageName === "data") {
+      window.requestAnimationFrame(() => {
+        renderAnalytics();
+        window.requestAnimationFrame(() => drawTrendChart(trendDays()));
+      });
+    }
+  }
+
+  function selectTrendPoint(event) {
+    const canvas = elements.trendChart;
+    const days = trendDays();
+    const rect = canvas.getBoundingClientRect();
+    const localX = Math.min(rect.width - 10, Math.max(28, event.clientX - rect.left));
+    const ratio = (localX - 28) / Math.max(1, rect.width - 38);
+    const index = Math.max(0, Math.min(days.length - 1, Math.round(ratio * (days.length - 1))));
+    runtime.period = "day";
+    runtime.selectedDayOffset = days[index].offset;
+    $$(".segment").forEach((item) => {
+      const active = item.dataset.period === "day";
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-selected", String(active));
+    });
+    renderAnalytics();
   }
 
   function openProfile() {
@@ -1271,12 +1674,13 @@
         claimSingle(button.dataset.claim, button);
       });
     });
-    elements.claimBothBtn.addEventListener("click", () => {
-      triggerButtonPress(elements.claimBothBtn);
-      claimBoth(elements.claimBothBtn);
-    });
-
     document.addEventListener("click", (event) => {
+      const claimBothButton = event.target.closest("[data-claim-both]");
+      if (claimBothButton) {
+        triggerButtonPress(claimBothButton);
+        claimBoth(claimBothButton);
+        return;
+      }
       const quantity = event.target.closest("[data-quantity]");
       if (quantity) {
         setChestReward(quantity.dataset.quantity);
@@ -1294,6 +1698,18 @@
       const deleteRecordButton = event.target.closest("[data-delete-record]");
       if (deleteRecordButton) {
         deleteDiamondRecord(deleteRecordButton.dataset.deleteRecord);
+        return;
+      }
+      const dayChip = event.target.closest("[data-day-offset]");
+      if (dayChip) {
+        runtime.period = "day";
+        runtime.selectedDayOffset = Number(dayChip.dataset.dayOffset) || 0;
+        $$(".segment").forEach((item) => {
+          const active = item.dataset.period === "day";
+          item.classList.toggle("active", active);
+          item.setAttribute("aria-selected", String(active));
+        });
+        renderAnalytics();
       }
     });
 
@@ -1305,15 +1721,60 @@
           item.classList.toggle("active", active);
           item.setAttribute("aria-selected", String(active));
         });
-        renderStats();
+        renderAnalytics();
       });
+    });
+
+    $$("[data-trend-range]").forEach((button) => {
+      button.addEventListener("click", () => {
+        runtime.trendRange = Number(button.dataset.trendRange) === 30 ? 30 : 7;
+        if (runtime.selectedDayOffset >= runtime.trendRange) {
+          runtime.selectedDayOffset = 0;
+          runtime.period = "day";
+        }
+        $$("[data-trend-range]").forEach((item) => {
+          item.classList.toggle("active", item === button);
+        });
+        renderAnalytics();
+        window.requestAnimationFrame(() => drawTrendChart(trendDays()));
+      });
+    });
+
+    elements.trendChart.addEventListener("click", selectTrendPoint);
+    elements.trendChart.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const days = trendDays();
+      const currentIndex = Math.max(
+        0,
+        days.findIndex((day) => day.offset === runtime.selectedDayOffset)
+      );
+      const nextIndex = Math.max(
+        0,
+        Math.min(
+          days.length - 1,
+          currentIndex + (event.key === "ArrowLeft" ? -1 : 1)
+        )
+      );
+      runtime.period = "day";
+      runtime.selectedDayOffset = days[nextIndex].offset;
+      $$(".segment").forEach((item) => {
+        const active = item.dataset.period === "day";
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-selected", String(active));
+      });
+      renderAnalytics();
     });
 
     $("#profileBtn").addEventListener("click", openProfile);
     $("#avatarPickBtn").addEventListener("click", () => elements.avatarInput.click());
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#ledgerBtn").addEventListener("click", openLedger);
+    $("#dataLedgerBtn").addEventListener("click", openLedger);
     $("#qqGroupBtn").addEventListener("click", () => openSheet(elements.qqGroupSheet));
+    $$("[data-nav-page]").forEach((button) => {
+      button.addEventListener("click", () => showPage(button.dataset.navPage));
+    });
     $("#qqCopyBtn").addEventListener("click", (event) => {
       triggerButtonPress(event.currentTarget);
       joinQqGroup();
@@ -1344,6 +1805,7 @@
       data.settings.theme = item.dataset.themeId;
       saveData();
       applyTheme();
+      renderDailyTrend();
     });
 
     elements.darkModeToggle.addEventListener("change", () => {
@@ -1380,8 +1842,13 @@
         renderAvailability("chest");
         renderAvailability("diamond");
         renderAssistant();
-        renderStats();
+        renderAnalytics();
       }
+    });
+
+    window.addEventListener("resize", () => {
+      const dataPage = document.querySelector('[data-page-view="data"]');
+      if (dataPage && !dataPage.hidden) renderDailyTrend();
     });
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -1395,7 +1862,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=7", { updateViaCache: "none" })
+        .register("./sw.js?v=8", { updateViaCache: "none" })
         .then((registration) => registration.update())
         .catch((error) => {
           console.warn("Service Worker 注册失败。", error);

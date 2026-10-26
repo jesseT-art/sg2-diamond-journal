@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=7" />
+    <link rel="manifest" href="./manifest.webmanifest?v=8" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=7" />
+    <link rel="stylesheet" href="./styles.css?v=8" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -62,7 +62,8 @@
         </div>
       </header>
 
-      <main>
+      <main class="page-stack">
+        <section class="page-view active" data-page-view="rewards" aria-label="奖励记录">
         <section class="user-strip" aria-label="个人信息">
           <button class="profile-button" id="profileBtn" type="button">
             <span class="avatar" id="headerAvatar">
@@ -162,19 +163,31 @@
         </section>
 
         <section class="action-dock" id="actionDock" aria-live="polite">
-          <div class="action-dock-idle">
-            <span class="action-dock-mark">+</span>
-            <span>领取后可在这里选择本次钻石收益或撤回记录</span>
-          </div>
-        </section>
-
-        <section class="combined-area">
-          <button class="combined-button" id="claimBothBtn" type="button">
+          <button
+            class="combined-button dock-combined-button"
+            id="claimBothBtn"
+            type="button"
+            data-claim-both
+          >
             <span class="combined-icon" aria-hidden="true">✓</span>
             <span>两边都领了，一起记录</span>
             <span class="combined-spark" aria-hidden="true">✦</span>
           </button>
         </section>
+        </section>
+
+        <section class="page-view" data-page-view="data" aria-label="数据统计" hidden>
+          <div class="page-intro">
+            <div>
+              <span class="page-eyebrow">DATA CENTER</span>
+              <h2>数据洞察</h2>
+              <p>按天查看收获，发现你的领取节奏。</p>
+            </div>
+            <button class="page-action-button" id="dataLedgerBtn" type="button">
+              钻石明细
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
 
         <section class="stats-card" aria-labelledby="statsTitle">
           <div class="section-heading">
@@ -254,8 +267,94 @@
           </div>
         </section>
 
+          <section class="trend-card" aria-labelledby="trendTitle">
+            <div class="trend-heading">
+              <div>
+                <span class="page-eyebrow" id="trendEyebrow">LAST 7 DAYS</span>
+                <h3 id="trendTitle">每日钻石趋势</h3>
+              </div>
+              <div class="trend-range-toggle" aria-label="趋势图时间范围">
+                <button class="active" type="button" data-trend-range="7">近 7 天</button>
+                <button type="button" data-trend-range="30">近 30 天</button>
+              </div>
+            </div>
+
+            <div class="daily-strip" id="dailyStrip" aria-label="选择要查看的日期"></div>
+
+            <div class="trend-canvas-wrap">
+              <canvas
+                id="trendChart"
+                role="img"
+                aria-label="最近七天钻石收益折线图"
+                tabindex="0"
+              ></canvas>
+              <div class="trend-empty" id="trendEmpty" hidden>
+                最近七天还没有数据，领取一次后会在这里形成趋势。
+              </div>
+            </div>
+
+            <div class="chart-caption-row">
+              <span id="chartHint">点击折线节点，查看当天详情</span>
+              <span class="chart-legend"><i></i>虚线：7 日趋势</span>
+            </div>
+
+            <div class="point-detail" id="pointDetail">
+              <div>
+                <span id="pointDate">今天</span>
+                <strong id="pointTotal">0 <small>钻石</small></strong>
+              </div>
+              <div class="point-breakdown">
+                <span>宝箱 <b id="pointChest">0</b></span>
+                <span>定时奖励 <b id="pointDiamond">0</b></span>
+                <span id="pointDelta">与昨天持平</span>
+              </div>
+            </div>
+
+            <div class="trend-insights">
+              <div class="insight-item">
+                <span id="trendAverageLabel">近 7 日日均</span>
+                <strong id="trendAverage">0 <small>钻石</small></strong>
+              </div>
+              <div class="insight-item">
+                <span>单日最高</span>
+                <strong id="trendBest">0 <small>钻石</small></strong>
+              </div>
+              <div class="insight-item">
+                <span>连续记录</span>
+                <strong id="trendStreak">0 <small>天</small></strong>
+              </div>
+            </div>
+            <p class="trend-analysis" id="trendAnalysis">还没有足够的数据用于分析。</p>
+          </section>
+        </section>
+
       </main>
     </div>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="nav-item active" type="button" data-nav-page="rewards" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M5 9.5h14v9H5zM3.5 9.5 6 5h12l2.5 4.5M12 5v13.5" />
+            <path d="M3.5 9.5h17M9.5 5h5" />
+          </svg>
+        </span>
+        <span>奖励</span>
+      </button>
+      <button class="nav-item" type="button" data-nav-page="data">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 19.5V5M4 19.5h16" />
+            <path d="m7 15 3.2-3.4 3 2.1L20 7.5" />
+            <circle cx="7" cy="15" r="1" fill="currentColor" stroke="none" />
+            <circle cx="10.2" cy="11.6" r="1" fill="currentColor" stroke="none" />
+            <circle cx="13.2" cy="13.7" r="1" fill="currentColor" stroke="none" />
+            <circle cx="20" cy="7.5" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        <span>数据</span>
+      </button>
+    </nav>
 
     <div class="sheet-backdrop" id="profileSheet" role="dialog" aria-modal="true" aria-labelledby="profileSheetTitle">
       <section class="sheet">
@@ -390,6 +489,6 @@
     <canvas id="celebrationCanvas" aria-hidden="true"></canvas>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=7" defer></script>
+    <script src="./app.js?v=8" defer></script>
   </body>
 </html>
