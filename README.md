@@ -16,6 +16,7 @@
 - 点击折线节点查看当天收益构成与环比变化
 - 连续记录天数和 7 日移动平均趋势
 - 点击钻石统计卡查看明细并删除错误记录
+- 宝箱与钻石奖励到点系统通知，并支持发送测试通知
 - 昵称和头像保存在本机
 - 9 套主题色、深色模式
 - 像素小助手显示今日领取次数和钻石数据
@@ -61,10 +62,23 @@ iPhone 使用 Safari 打开 HTTPS 地址，点击分享按钮，选择“添加�
 
 ## 更新注意
 
-每次正式发布界面或脚本更新时，必须同步提升资源版本号，例如从 `v8` 改为 `v9`：
+每次正式发布界面或脚本更新时，必须同步提升资源版本号，例如从 `v9` 改为 `v10`。
 
-- `index.html` 中的 `styles.css?v=8`、`app.js?v=8` 和 `manifest.webmanifest?v=8`
-- `app.js` 中 Service Worker 的 `sw.js?v=8`
+可运行以下命令自动升号并检查：
+
+```powershell
+pwsh -NoProfile -File scripts/bump-version.ps1 -Version 10
+pwsh -NoProfile -File scripts/check-release.ps1
+```
+
+手动修改时必须同步更新：
+
+- `index.html` 中的 `styles.css?v=9`、`app.js?v=9` 和 `manifest.webmanifest?v=9`
+- `app.js` 中 Service Worker 的 `sw.js?v=9`
 - `sw.js` 中的 `CACHE_NAME` 和 `APP_SHELL` 资源地址
 
 所有位置必须使用同一个版本号。这样可以避免已安装用户第一次打开时，出现新 HTML 搭配旧 CSS/JS 的界面错乱。`localStorage` 和 `IndexedDB` 不需要清理，程序资源缓存更新不会删除用户记录。
+
+## 网页通知限制
+
+网页版会在应用打开、切到后台但仍由浏览器存活时检查领取时间，到点后通过 Service Worker 发送系统通知。普通网页完全退出后无法保证继续执行定时器；需要关闭应用后仍可靠提醒的 Android 用户应安装 APK。iOS 需要把网页添加到主屏幕，并允许通知权限。

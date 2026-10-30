@@ -9,6 +9,10 @@
   const QQ_GROUP_UIN = "1124909778";
   const QQ_GROUP_JOIN_URL =
     "https://qun.qq.com/universal-share/share?ac=1&authKey=NcYpwsw0uyoFEvfs9K2U0pbty1aFJLvkQXB1WnvvOnZCPSvzCZwEphqSlFLl6wyi&busi_data=eyJncm91cENvZGUiOiIxMTI0OTA5Nzc4IiwidG9rZW4iOiJXQUZ6VVRtQmJOMnNJTTFiN2I0S2hQR1JiclgwVksxTWROSi8wVldZVmR6a016RFpNNjM5NTU0Q2hUdmFPN0tsIiwidWluIjoiMTYzNDM2NTAxOCJ9&data=RAJFbnazxsLdojQkwFPLDWRy45IJE61AEZPZvLGCa1pr1G0BoThgG3AXuHnVre6ylk5h6p8rtADBwgggG83gBA&svctype=4&tempid=h5_group_info";
+  const NOTIFICATION_LABELS = {
+    chest: { title: "宝箱可以领取了", action: "回到手账记录宝箱" },
+    diamond: { title: "钻石奖励可以领取了", action: "回到手账领取钻石" },
+  };
 
   const THEMES = [
     { id: "blue", name: "经典蓝", swatch: "#2f7dff", accent: "#2f7dff", strong: "#1f6bff", soft: "#eaf3ff" },
@@ -63,6 +67,10 @@
     chestDurationInput: $("#chestDurationInput"),
     diamondDurationInput: $("#diamondDurationInput"),
     darkModeToggle: $("#darkModeToggle"),
+    notificationToggle: $("#notificationToggle"),
+    notificationStatus: $("#notificationStatus"),
+    notificationHint: $("#notificationHint"),
+    testNotificationBtn: $("#testNotificationBtn"),
     themeGrid: $("#themeGrid"),
     installBtn: $("#installBtn"),
     toast: $("#toast"),
@@ -95,6 +103,8 @@
   let celebrationAccumulator = 0;
   let celebrationParticles = [];
   let celebrationContext = null;
+  let serviceWorkerRegistration = null;
+  let notificationTimer = 0;
 
   const runtime = {
     undo: { chest: null, diamond: null },
@@ -102,6 +112,7 @@
     period: "day",
     selectedDayOffset: 0,
     trendRange: 7,
+    notificationPending: new Set(),
   };
 
   function defaultData() {
@@ -111,6 +122,7 @@
       settings: {
         theme: "blue",
         dark: false,
+        notifications: false,
         durations: { chest: 60, diamond: 30 },
       },
       current: { chest: null, diamond: null },
@@ -145,6 +157,7 @@
       result.settings.theme = "blue";
     }
     result.settings.dark = Boolean(result.settings.dark);
+    result.settings.notifications = Boolean(result.settings.notifications);
     for (const kind of ["chest", "diamond"]) {
       const duration = Number(result.settings.durations[kind]);
       result.settings.durations[kind] =
@@ -163,6 +176,7 @@
           duration: Number(current.duration) || result.settings.durations[kind],
           reward: kind === "diamond" ? 2 : [0, 1, 2].includes(Number(current.reward)) ? Number(current.reward) : 2,
           eventId: String(current.eventId || ""),
+          notificationSentFor: Number(current.notificationSentFor) || 0,
         };
       }
     }
@@ -479,6 +493,199 @@
     if (dayDifference === 1) return "明天";
     if (dayDifference === -1) return "昨天";
     return `${target.getMonth() + 1}月${target.getDate()}日`;
+  }
+
+  function notificationsSupported() {
+    return (
+      window.isSecureContext &&
+      typeof Notification !== "undefined" &&
+      "serviceWorker" in navigator
+    );
+  }
+
+  function currentNotificationPermission() {
+    return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+  }
+
+  async function requestNotificationPermission() {
+    if (!notificationsSupported()) return "unsupported";
+    if (Notification.permission !== "default") return Notification.permission;
+    try {
+      const result = Notification.requestPermission();
+      if (result && typeof result.then === "function") {
+        return await result;
+      }
+      return currentNotificationPermission();
+    } catch (error) {
+      console.warn("通知权限请求失败。", error);
+      return Notification.permission;
+    }
+  }
+
+  function renderNotificationSettings() {
+    if (
+      !elements.notificationToggle ||
+      !elements.notificationStatus ||
+      !elements.notificationHint ||
+      !elements.testNotificationBtn
+    ) {
+      return;
+    }
+
+    const supported = notificationsSupported();
+    const permission = currentNotificationPermission();
+    const enabled = Boolean(data.settings.notifications);
+    const canUse = supported && permission !== "denied";
+    let status = "未开启";
+    let hint =
+      "开启后会分别提醒宝箱和钻石奖励。网页版需保持应用打开或在后台运行。";
+    let hintState = "idle";
+
+    if (!window.isSecureContext) {
+      status = "需要 HTTPS";
+      hint = "通知只能通过 HTTPS 或 localhost 使用，请打开正式发布的 GitHub Pages 地址。";
+      hintState = "warning";
+    } else if (permission === "unsupported") {
+      status = "浏览器不支持";
+      hint = "当前浏览器没有提供系统通知。Android 用户可安装 APK 获得完整的本地通知。";
+      hintState = "warning";
+    } else if (permission === "denied") {
+      status = "已被系统阻止";
+      hint = "请在浏览器的网站权限中允许通知，然后刷新页面重新开启。";
+      hintState = "warning";
+    } else if (enabled && permission === "granted") {
+      status = "已开启";
+      hint = "宝箱和钻石会在预计领取时间分别弹出通知。请保持应用打开或在后台运行。";
+      hintState = "ready";
+    } else if (enabled && permission === "default") {
+      status = "等待授权";
+      hint = "开启通知后，请在浏览器弹窗中选择“允许”。";
+      hintState = "ready";
+    }
+
+    elements.notificationToggle.checked = enabled && permission === "granted";
+    elements.notificationToggle.disabled = !canUse;
+    elements.testNotificationBtn.disabled = !canUse;
+    elements.notificationStatus.textContent = status;
+    elements.notificationHint.textContent = hint;
+    elements.notificationHint.dataset.state = hintState;
+  }
+
+  async function showReminderNotification(kind, { test = false } = {}) {
+    if (currentNotificationPermission() !== "granted") {
+      throw new Error("通知权限尚未开启");
+    }
+
+    const labels = NOTIFICATION_LABELS[kind] || NOTIFICATION_LABELS.chest;
+    const title = test ? "钻石手账通知测试成功" : labels.title;
+    const expectedAt = Number(data.current[kind]?.expectedAt) || Date.now();
+    const body = test
+      ? "宝箱和钻石到点后，会像这样提醒你。"
+      : `${formatTime(expectedAt)} · ${labels.action}`;
+    const tag = test ? `sg2-test-${Date.now()}` : `sg2-${kind}-${data.current[kind]?.expectedAt || "now"}`;
+    const options = {
+      body,
+      icon: "./assets/app-icon-192.png",
+      badge: "./assets/favicon-32.png",
+      tag,
+      renotify: !test,
+      data: { url: "./", kind },
+    };
+
+    if (serviceWorkerRegistration?.showNotification) {
+      await serviceWorkerRegistration.showNotification(title, options);
+      return;
+    }
+
+    if ("serviceWorker" in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration?.showNotification) {
+          await registration.showNotification(title, options);
+          return;
+        }
+      } catch (error) {
+        console.warn("Service Worker 通知不可用，尝试使用页面通知。", error);
+      }
+    }
+
+    const notification = new Notification(title, options);
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+  }
+
+  async function checkDueNotifications() {
+    if (
+      !data.settings.notifications ||
+      !notificationsSupported() ||
+      currentNotificationPermission() !== "granted"
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    for (const kind of ["chest", "diamond"]) {
+      const current = data.current[kind];
+      const expectedAt = Number(current?.expectedAt);
+      if (
+        !current ||
+        !Number.isFinite(expectedAt) ||
+        now < expectedAt ||
+        Number(current.notificationSentFor) === expectedAt ||
+        runtime.notificationPending.has(kind)
+      ) {
+        continue;
+      }
+
+      runtime.notificationPending.add(kind);
+      try {
+        await showReminderNotification(kind);
+        if (data.current[kind] === current) {
+          current.notificationSentFor = expectedAt;
+          saveData();
+        }
+      } catch (error) {
+        console.warn(`${NOTIFICATION_LABELS[kind].title}通知发送失败。`, error);
+      } finally {
+        runtime.notificationPending.delete(kind);
+      }
+    }
+  }
+
+  function scheduleReminderCheck() {
+    window.clearTimeout(notificationTimer);
+    notificationTimer = 0;
+    if (
+      !data.settings.notifications ||
+      !notificationsSupported() ||
+      currentNotificationPermission() !== "granted"
+    ) {
+      return;
+    }
+
+    const pendingTimes = ["chest", "diamond"]
+      .map((kind) => {
+        const current = data.current[kind];
+        const expectedAt = Number(current?.expectedAt);
+        if (
+          !current ||
+          !Number.isFinite(expectedAt) ||
+          Number(current.notificationSentFor) === expectedAt
+        ) {
+          return Number.POSITIVE_INFINITY;
+        }
+        return expectedAt;
+      })
+      .filter(Number.isFinite);
+
+    if (!pendingTimes.length) return;
+    const delay = Math.max(250, Math.min(...pendingTimes) - Date.now() + 250);
+    notificationTimer = window.setTimeout(async () => {
+      await checkDueNotifications();
+      scheduleReminderCheck();
+    }, Math.min(delay, 2147483647));
   }
 
   function renderDateHeader() {
@@ -1004,11 +1211,13 @@
     renderDateHeader();
     renderProfile();
     renderIntervals();
+    renderNotificationSettings();
     renderAvailability("chest");
     renderAvailability("diamond");
     renderActionDock();
     renderAssistant();
     renderAnalytics();
+    scheduleReminderCheck();
   }
 
   function showToast(message) {
@@ -1170,6 +1379,7 @@
         duration,
         reward,
         eventId: id,
+        notificationSentFor: 0,
       },
     };
   }
@@ -1384,6 +1594,7 @@
     elements.chestDurationInput.value = String(data.settings.durations.chest);
     elements.diamondDurationInput.value = String(data.settings.durations.diamond);
     elements.darkModeToggle.checked = data.settings.dark;
+    renderNotificationSettings();
     renderThemeGrid();
     openSheet(elements.settingsSheet);
   }
@@ -1799,6 +2010,64 @@
     $("#resetBtn").addEventListener("click", resetAllData);
     elements.installBtn.addEventListener("click", promptInstall);
 
+    elements.notificationToggle.addEventListener("change", async () => {
+      if (!elements.notificationToggle.checked) {
+        data.settings.notifications = false;
+        saveData();
+        window.clearTimeout(notificationTimer);
+        notificationTimer = 0;
+        renderNotificationSettings();
+        showToast("到点通知已关闭");
+        return;
+      }
+
+      const permission = await requestNotificationPermission();
+      if (permission !== "granted") {
+        data.settings.notifications = false;
+        saveData();
+        renderNotificationSettings();
+        showToast(
+          permission === "denied"
+            ? "通知权限已被阻止，请在浏览器的网站权限中重新允许"
+            : "当前环境无法开启系统通知"
+        );
+        return;
+      }
+
+      data.settings.notifications = true;
+      saveData();
+      renderNotificationSettings();
+      await checkDueNotifications();
+      scheduleReminderCheck();
+      showToast("到点通知已开启");
+    });
+
+    elements.testNotificationBtn.addEventListener("click", async () => {
+      const permission = await requestNotificationPermission();
+      if (permission !== "granted") {
+        renderNotificationSettings();
+        showToast(
+          permission === "denied"
+            ? "通知权限已被阻止，请在浏览器的网站权限中重新允许"
+            : "当前环境无法发送系统通知"
+        );
+        return;
+      }
+
+      try {
+        await showReminderNotification("chest", { test: true });
+        data.settings.notifications = true;
+        saveData();
+        renderNotificationSettings();
+        await checkDueNotifications();
+        scheduleReminderCheck();
+        showToast("测试通知已发送");
+      } catch (error) {
+        console.error(error);
+        showToast("测试通知发送失败，请检查系统通知权限");
+      }
+    });
+
     elements.themeGrid.addEventListener("click", (event) => {
       const item = event.target.closest("[data-theme-id]");
       if (!item) return;
@@ -1843,6 +2112,8 @@
         renderAvailability("diamond");
         renderAssistant();
         renderAnalytics();
+        checkDueNotifications();
+        scheduleReminderCheck();
       }
     });
 
@@ -1862,8 +2133,14 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=8", { updateViaCache: "none" })
-        .then((registration) => registration.update())
+        .register("./sw.js?v=9", { updateViaCache: "none" })
+        .then((registration) => {
+          serviceWorkerRegistration = registration;
+          registration.update();
+          renderNotificationSettings();
+          checkDueNotifications();
+          scheduleReminderCheck();
+        })
         .catch((error) => {
           console.warn("Service Worker 注册失败。", error);
         });
@@ -1894,6 +2171,8 @@
       renderAvailability("chest");
       renderAvailability("diamond");
       renderAssistant();
+      checkDueNotifications();
+      scheduleReminderCheck();
     }, 30000);
 
   }

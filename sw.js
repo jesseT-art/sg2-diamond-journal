@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "sg2-diamond-journal-v8";
+const CACHE_NAME = "sg2-diamond-journal-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=8",
-  "./app.js?v=8",
-  "./manifest.webmanifest?v=8",
+  "./styles.css?v=9",
+  "./app.js?v=9",
+  "./manifest.webmanifest?v=9",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
   "./assets/app-icon-180.png",
@@ -69,5 +69,22 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
     )
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "./", self.location.origin).href;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const existing = clients.find((client) => client.url.startsWith(targetUrl));
+        if (existing) {
+          return existing.focus();
+        }
+        return self.clients.openWindow(targetUrl);
+      })
   );
 });

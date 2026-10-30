@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=8" />
+    <link rel="manifest" href="./manifest.webmanifest?v=9" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=8" />
+    <link rel="stylesheet" href="./styles.css?v=9" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -417,6 +417,27 @@
           </div>
         </div>
 
+        <div class="settings-group notification-settings">
+          <div class="group-heading">
+            <h3>到点通知</h3>
+            <span id="notificationStatus">未开启</span>
+          </div>
+          <label class="toggle-row notification-toggle-row">
+            <span>
+              <strong>宝箱与钻石奖励提醒</strong>
+              <small>到点后发送系统通知</small>
+            </span>
+            <input id="notificationToggle" type="checkbox" />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+          <p class="notification-hint" id="notificationHint">
+            网页版需保持应用打开或在后台运行；完全关闭后请使用 Android APK 接收可靠提醒。
+          </p>
+          <button class="settings-action notification-test" id="testNotificationBtn" type="button">
+            发送测试通知
+          </button>
+        </div>
+
         <div class="settings-group">
           <div class="group-heading">
             <h3>主题配色</h3>
@@ -489,6 +510,6 @@
     <canvas id="celebrationCanvas" aria-hidden="true"></canvas>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=8" defer></script>
+    <script src="./app.js?v=9" defer></script>
   </body>
 </html>

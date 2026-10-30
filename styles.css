@@ -1386,6 +1386,47 @@ html[data-mode="dark"] .stats-card {
   color: var(--danger);
 }
 
+.notification-settings {
+  position: relative;
+}
+
+.notification-toggle-row {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: 0;
+}
+
+.notification-hint {
+  padding: 10px 12px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent-soft) 62%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.notification-hint[data-state="ready"] {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+}
+
+.notification-hint[data-state="warning"] {
+  color: var(--danger);
+}
+
+.notification-test {
+  width: 100%;
+  margin-top: 9px;
+}
+
+.settings-action:disabled,
+.toggle-row input:disabled + .toggle {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .qq-group-backdrop {
   align-items: center;
 }
