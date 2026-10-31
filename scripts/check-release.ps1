@@ -62,6 +62,10 @@ foreach ($RelativePath in $Required) {
 }
 
 Assert-Check ($App -match 'notificationToggle') "app.js 缺少通知开关逻辑。"
+Assert-Check ($App -match 'function isIOSDevice') "app.js 缺少 iOS 平台检测。"
+Assert-Check ($App -match '!isIOSDevice\(\)') "通知兼容性检查未排除 iOS。"
+Assert-Check ($App -match 'triggerHapticFeedback') "app.js 缺少领取震动反馈逻辑。"
+Assert-Check ($App -match 'navigator\.vibrate') "app.js 未使用浏览器震动接口。"
 Assert-Check ($ServiceWorker -match 'notificationclick') "sw.js 缺少通知点击处理。"
 Assert-Check ($App -match 'sg2-diamond-journal-v1') "localStorage 兼容键疑似被修改。"
 Assert-Check ($App -match 'const DB_NAME = "sg2-diamond-journal"') "IndexedDB 名称疑似被修改。"

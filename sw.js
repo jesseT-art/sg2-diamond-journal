@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "sg2-diamond-journal-v9";
+const CACHE_NAME = "sg2-diamond-journal-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=9",
-  "./app.js?v=9",
-  "./manifest.webmanifest?v=9",
+  "./styles.css?v=11",
+  "./app.js?v=11",
+  "./manifest.webmanifest?v=11",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
   "./assets/app-icon-180.png",

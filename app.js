@@ -67,6 +67,7 @@
     chestDurationInput: $("#chestDurationInput"),
     diamondDurationInput: $("#diamondDurationInput"),
     darkModeToggle: $("#darkModeToggle"),
+    notificationSettings: $("#notificationSettings"),
     notificationToggle: $("#notificationToggle"),
     notificationStatus: $("#notificationStatus"),
     notificationHint: $("#notificationHint"),
@@ -495,8 +496,17 @@
     return `${target.getMonth() + 1}月${target.getDate()}日`;
   }
 
+  function isIOSDevice() {
+    const userAgent = navigator.userAgent || "";
+    return (
+      /iPad|iPhone|iPod/i.test(userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+    );
+  }
+
   function notificationsSupported() {
     return (
+      !isIOSDevice() &&
       window.isSecureContext &&
       typeof Notification !== "undefined" &&
       "serviceWorker" in navigator
@@ -541,7 +551,11 @@
       "开启后会分别提醒宝箱和钻石奖励。网页版需保持应用打开或在后台运行。";
     let hintState = "idle";
 
-    if (!window.isSecureContext) {
+    if (isIOSDevice()) {
+      status = "iOS 暂不支持";
+      hint = "iOS 网页和主屏幕 PWA 无法可靠执行后台定时通知，此功能已关闭。Android 用户可继续使用 APK 提醒。";
+      hintState = "warning";
+    } else if (!window.isSecureContext) {
       status = "需要 HTTPS";
       hint = "通知只能通过 HTTPS 或 localhost 使用，请打开正式发布的 GitHub Pages 地址。";
       hintState = "warning";
@@ -1237,6 +1251,16 @@
     window.setTimeout(() => button.classList.remove("is-pressing"), 220);
   }
 
+  function triggerHapticFeedback(type = "single") {
+    if (typeof navigator.vibrate !== "function") return false;
+    try {
+      return navigator.vibrate(type === "both" ? [14, 28, 20] : 18);
+    } catch (error) {
+      console.warn("设备不支持震动反馈。", error);
+      return false;
+    }
+  }
+
   function resizeCelebrationCanvas() {
     const canvas = elements.celebrationCanvas;
     if (!canvas) return null;
@@ -1882,6 +1906,7 @@
     $$("[data-claim]").forEach((button) => {
       button.addEventListener("click", () => {
         triggerButtonPress(button);
+        triggerHapticFeedback("single");
         claimSingle(button.dataset.claim, button);
       });
     });
@@ -1889,6 +1914,7 @@
       const claimBothButton = event.target.closest("[data-claim-both]");
       if (claimBothButton) {
         triggerButtonPress(claimBothButton);
+        triggerHapticFeedback("both");
         claimBoth(claimBothButton);
         return;
       }
@@ -2133,7 +2159,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=9", { updateViaCache: "none" })
+        .register("./sw.js?v=11", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
@@ -2154,6 +2180,10 @@
   }
 
   async function init() {
+    if (isIOSDevice() && data.settings.notifications) {
+      data.settings.notifications = false;
+      saveData();
+    }
     applyTheme();
     bindEvents();
     registerServiceWorker();

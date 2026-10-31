@@ -63,9 +63,15 @@ git -c http.sslBackend=openssl push origin main
 
 ## 通知实现边界
 
-网页版使用 Notification API 和 Service Worker，在应用打开或后台存活时按 `expectedAt` 提醒。普通网页被系统完全结束后没有可靠的精确后台定时能力；Android APK 使用原生本地闹钟，可在应用关闭、重启及更新后恢复提醒。
+Android 和其他兼容浏览器使用 Notification API 与 Service Worker，在应用打开或后台存活时按 `expectedAt` 提醒。普通网页被系统完全结束后没有可靠的精确后台定时能力；Android APK 使用原生本地闹钟，可在应用关闭、重启及更新后恢复提醒。
+
+iOS 网页和主屏幕 PWA 已确认无法可靠执行本地后台定时通知，因此 `isIOSDevice()` 必须直接禁用通知入口并清除已开启标记，不请求权限、不创建通知计时器。
 
 每次领取的 `notificationSentFor` 保存为对应的 `expectedAt`，确保同一轮奖励只提醒一次。
+
+## 震动反馈
+
+宝箱、钻石的“下一个”按钮和“一起领取”按钮会在点击时调用 `navigator.vibrate`。单领使用短震，双领使用轻量双震。iOS 网页不提供 Vibration API，必须无提示降级，不应因此阻止领取。
 
 ## 交付检查
 

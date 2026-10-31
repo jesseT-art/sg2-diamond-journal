@@ -22,10 +22,11 @@ function Update-FileText {
 
     $Path = Join-Path $Root $RelativePath
     $Content = Get-Content -LiteralPath $Path -Raw
-    $Updated = [regex]::Replace($Content, $Pattern, $Replacement)
-    if ($Updated -eq $Content) {
+    $Regex = [regex]::new($Pattern)
+    if (-not $Regex.IsMatch($Content)) {
         throw "未在 $RelativePath 中找到可更新的版本标记。"
     }
+    $Updated = $Regex.Replace($Content, $Replacement)
     [System.IO.File]::WriteAllText($Path, $Updated, [System.Text.UTF8Encoding]::new($false))
 }
 
