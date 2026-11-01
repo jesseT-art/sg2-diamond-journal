@@ -83,6 +83,7 @@ Assert-Check ($App -match 'showClaimUndo') "app.js 缺少主领取按钮统一�
 Assert-Check ($App -match 'const previousReward') "宝箱收益修正逻辑不完整。"
 Assert-Check ($App -match 'showDailyTask') "app.js 缺少每日任务显示设置。"
 Assert-Check ($App -match 'durations: \{ chest: 70, diamond: 45 \}') "默认刷新间隔不是 70/45 分钟。"
+Assert-Check ($App -match 'const DATA_VERSION = 2') "旧版默认间隔迁移版本号缺失。"
 Assert-Check ($Index -match 'id="sourceGrid"') "index.html 缺少额外钻石来源板块。"
 Assert-Check ($Index -match 'id="rewardTotalFloat"') "index.html 缺少顶部总钻石悬浮窗。"
 Assert-Check ($ServiceWorker -match 'notificationclick') "sw.js 缺少通知点击处理。"

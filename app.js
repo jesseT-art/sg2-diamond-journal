@@ -4,6 +4,7 @@
   const STORAGE_KEY = "sg2-diamond-journal-v1";
   const DB_NAME = "sg2-diamond-journal";
   const DB_VERSION = 1;
+  const DATA_VERSION = 2;
   const UNDO_MS = 5000;
   const DEFAULT_NICKNAME = "像素冒险者";
   const QQ_GROUP_UIN = "1124909778";
@@ -217,7 +218,7 @@
 
   function defaultData() {
     return {
-      version: 1,
+      version: DATA_VERSION,
       profile: { nickname: DEFAULT_NICKNAME },
       settings: {
         theme: "blue",
@@ -238,6 +239,7 @@
   function normalizeData(input) {
     const fallback = defaultData();
     const source = input && typeof input === "object" ? input : {};
+    const sourceVersion = Number(source.version) || 1;
     const result = {
       ...fallback,
       ...source,
@@ -283,6 +285,15 @@
           notificationSentFor: Number(current.notificationSentFor) || 0,
         };
       }
+    }
+    if (sourceVersion < 2) {
+      if (Number(result.settings.durations.chest) === 60) {
+        result.settings.durations.chest = 70;
+      }
+      if (Number(result.settings.durations.diamond) === 30) {
+        result.settings.durations.diamond = 45;
+      }
+      result.version = DATA_VERSION;
     }
     for (const extraSource of EXTRA_SOURCES) {
       if (!extraSource.rateLimit) continue;
@@ -2729,7 +2740,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=24", { updateViaCache: "none" })
+        .register("./sw.js?v=25", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
@@ -2752,8 +2763,8 @@
   async function init() {
     if (isIOSDevice() && data.settings.notifications) {
       data.settings.notifications = false;
-      saveData();
     }
+    saveData();
     applyTheme();
     bindEvents();
     registerServiceWorker();
