@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=11" />
+    <link rel="manifest" href="./manifest.webmanifest?v=24" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=11" />
+    <link rel="stylesheet" href="./styles.css?v=24" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -90,9 +90,9 @@
           <div class="assistant-bubble">
             <div class="assistant-heading">
               <span>像素小助手</span>
-              <span class="assistant-online"><i></i>AI 在线</span>
+              <span class="assistant-online"><i></i>随本机记录</span>
             </div>
-            <p id="assistantText">
+            <p id="assistantText" aria-live="polite">
               领完奖励后点一下“下一个”，我会把下一次可领取时间记在这本手账里。
             </p>
           </div>
@@ -108,7 +108,7 @@
           <article class="reward-card chest-card" data-kind="chest">
             <div class="card-topline">
               <span class="reward-kicker">宝箱</span>
-              <span class="interval-label" id="chestIntervalLabel">每 60 分钟</span>
+              <span class="interval-label" id="chestIntervalLabel">每 70 分钟</span>
             </div>
             <div class="reward-art">
               <span class="art-glow"></span>
@@ -136,7 +136,7 @@
           <article class="reward-card diamond-card" data-kind="diamond">
             <div class="card-topline">
               <span class="reward-kicker">钻石奖励</span>
-              <span class="interval-label" id="diamondIntervalLabel">每 30 分钟</span>
+              <span class="interval-label" id="diamondIntervalLabel">每 45 分钟</span>
             </div>
             <div class="reward-art">
               <span class="art-glow"></span>
@@ -173,6 +173,19 @@
             <span>两边都领了，一起记录</span>
             <span class="combined-spark" aria-hidden="true">✦</span>
           </button>
+        </section>
+
+        <section class="source-panel" aria-labelledby="sourcePanelTitle">
+          <div class="source-heading">
+            <div>
+              <span class="section-kicker">MORE DIAMONDS</span>
+              <h2 id="sourcePanelTitle">更多获取途径</h2>
+            </div>
+            <span>点击即入账</span>
+          </div>
+          <div id="dailyTaskSlot"></div>
+          <div class="source-grid" id="sourceGrid"></div>
+          <p class="source-footnote">若误触，请前往“钻石明细”删除对应钻石记录。</p>
         </section>
         </section>
 
@@ -253,15 +266,17 @@
               <strong><span id="chestDiamonds">0</span><small>颗</small></strong>
             </div>
             <div class="stat-item">
-              <span class="stat-label">固定奖励</span>
-              <strong><span id="fixedDiamonds">0</span><small>颗</small></strong>
+              <span class="stat-label">额外来源</span>
+              <strong><span id="sourceDiamonds">0</span><small>颗</small></strong>
             </div>
           </div>
 
           <div class="stats-formula">
             <span>宝箱收益</span>
             <b>+</b>
-            <span>钻石奖励次数 × 2</span>
+            <span>定时奖励</span>
+            <b>+</b>
+            <span>额外来源</span>
             <b>=</b>
             <strong id="formulaTotal">0 钻石</strong>
           </div>
@@ -306,6 +321,7 @@
               <div class="point-breakdown">
                 <span>宝箱 <b id="pointChest">0</b></span>
                 <span>定时奖励 <b id="pointDiamond">0</b></span>
+                <span>额外来源 <b id="pointExtra">0</b></span>
                 <span id="pointDelta">与昨天持平</span>
               </div>
             </div>
@@ -417,6 +433,21 @@
           </div>
         </div>
 
+        <div class="settings-group">
+          <div class="group-heading">
+            <h3>首页内容</h3>
+            <span>按使用习惯调整</span>
+          </div>
+          <label class="toggle-row daily-task-visibility-row">
+            <span>
+              <strong>显示每日任务</strong>
+              <small>关闭后隐藏首页每日任务板块，已有记录不会删除</small>
+            </span>
+            <input id="dailyTaskVisibilityToggle" type="checkbox" />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+        </div>
+
         <div class="settings-group notification-settings" id="notificationSettings">
           <div class="group-heading">
             <h3>到点通知</h3>
@@ -503,13 +534,28 @@
         </div>
         <p class="ledger-summary" id="ledgerSummary">本日共获得 0 钻石</p>
         <div class="ledger-list" id="ledgerList"></div>
-        <p class="ledger-rule">为防止误记，任意 60 秒内最多记录 6 颗钻石</p>
+        <p class="ledger-rule">防误触：BOSS、种子、额外宝箱每个按钮 5 秒内最多 2 次；每日限制按本机日期计算。</p>
       </section>
     </div>
 
     <canvas id="celebrationCanvas" aria-hidden="true"></canvas>
+    <div class="reward-flight-layer" id="rewardFlightLayer" aria-hidden="true"></div>
+    <div class="reward-total-float" id="rewardTotalFloat" role="status" aria-live="polite" hidden>
+      <span class="reward-total-icon">
+        <img src="./assets/diamond.png" alt="" />
+      </span>
+      <span class="reward-total-copy">
+        <small id="rewardTotalGain">本次 +1</small>
+        <span>今日总钻石</span>
+      </span>
+      <strong class="reward-total-value" id="rewardTotalValue">0</strong>
+    </div>
+    <div class="source-undo-toast" id="sourceUndoToast" role="status" aria-live="polite" hidden>
+      <span id="sourceUndoText">钻石记录已更新</span>
+      <button id="sourceUndoBtn" type="button">撤销</button>
+    </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=11" defer></script>
+    <script src="./app.js?v=24" defer></script>
   </body>
 </html>

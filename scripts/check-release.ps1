@@ -55,7 +55,13 @@ $Required = @(
     "manifest.webmanifest",
     "assets/app-icon-192.png",
     "assets/app-icon-512.png",
-    "assets/favicon-32.png"
+    "assets/favicon-32.png",
+    "assets/source-boss.png",
+    "assets/source-seed.png",
+    "assets/source-chest.png",
+    "assets/source-daily-gift.png",
+    "assets/source-character-card.png",
+    "assets/task-icon.svg"
 )
 foreach ($RelativePath in $Required) {
     Assert-Check (Test-Path -LiteralPath (Join-Path $Root $RelativePath)) "缺少发布文件：$RelativePath"
@@ -66,6 +72,19 @@ Assert-Check ($App -match 'function isIOSDevice') "app.js 缺少 iOS 平台检�
 Assert-Check ($App -match '!isIOSDevice\(\)') "通知兼容性检查未排除 iOS。"
 Assert-Check ($App -match 'triggerHapticFeedback') "app.js 缺少领取震动反馈逻辑。"
 Assert-Check ($App -match 'navigator\.vibrate') "app.js 未使用浏览器震动接口。"
+Assert-Check ($App -match 'const EXTRA_SOURCES') "app.js 缺少首页额外钻石来源配置。"
+Assert-Check ($App -match 'function addExtraDiamond') "app.js 缺少额外钻石记录逻辑。"
+Assert-Check ($App -match 'animateDiamondsToTotal') "app.js 缺少钻石飞行动画。"
+Assert-Check ($App -match 'created\.current\.reward, todayDiamondTotal') "单领按钮未接入钻石飞行动画。"
+Assert-Check ($App -match 'chestClaim\.current\.reward \+ diamondClaim\.current\.reward') "双领按钮未接入四颗钻石飞行动画。"
+Assert-Check ($App -match 'ASSISTANT_MESSAGES') "app.js 缺少分层助手文案。"
+Assert-Check ($App -match 'showSourceUndo') "app.js 缺少来源记录撤销。"
+Assert-Check ($App -match 'showClaimUndo') "app.js 缺少主领取按钮统一撤销。"
+Assert-Check ($App -match 'const previousReward') "宝箱收益修正逻辑不完整。"
+Assert-Check ($App -match 'showDailyTask') "app.js 缺少每日任务显示设置。"
+Assert-Check ($App -match 'durations: \{ chest: 70, diamond: 45 \}') "默认刷新间隔不是 70/45 分钟。"
+Assert-Check ($Index -match 'id="sourceGrid"') "index.html 缺少额外钻石来源板块。"
+Assert-Check ($Index -match 'id="rewardTotalFloat"') "index.html 缺少顶部总钻石悬浮窗。"
 Assert-Check ($ServiceWorker -match 'notificationclick') "sw.js 缺少通知点击处理。"
 Assert-Check ($App -match 'sg2-diamond-journal-v1') "localStorage 兼容键疑似被修改。"
 Assert-Check ($App -match 'const DB_NAME = "sg2-diamond-journal"') "IndexedDB 名称疑似被修改。"

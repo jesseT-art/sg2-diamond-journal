@@ -13,6 +13,88 @@
     chest: { title: "宝箱可以领取了", action: "回到手账记录宝箱" },
     diamond: { title: "钻石奖励可以领取了", action: "回到手账领取钻石" },
   };
+  const EXTRA_SOURCES = [
+    {
+      id: "boss",
+      name: "BOSS",
+      reward: 1,
+      icon: "./assets/source-boss.png",
+      rateLimit: { windowMs: 5000, max: 2 },
+    },
+    {
+      id: "seed",
+      name: "种子",
+      reward: 1,
+      icon: "./assets/source-seed.png",
+      rateLimit: { windowMs: 5000, max: 2 },
+    },
+    {
+      id: "bonus-chest",
+      name: "宝箱",
+      reward: 1,
+      icon: "./assets/source-chest.png",
+      rateLimit: { windowMs: 5000, max: 2 },
+    },
+    {
+      id: "daily-task",
+      name: "每日任务",
+      reward: 5,
+      icon: "./assets/task-icon.svg",
+      dailyLimit: 1,
+    },
+    {
+      id: "character-card",
+      name: "角色卡合成",
+      reward: 1,
+      icon: "./assets/source-character-card.png",
+    },
+    {
+      id: "daily-gift",
+      name: "天天送礼物",
+      reward: 1,
+      icon: "./assets/source-daily-gift.png",
+      dailyLimit: 2,
+    },
+  ];
+  const EXTRA_SOURCE_BY_ID = new Map(EXTRA_SOURCES.map((source) => [source.id, source]));
+  const ASSISTANT_MESSAGES = {
+    empty: [
+      "手账已经准备好了。领完奖励后点一下“下一个”，今天的第一颗钻石就从这里开始。",
+      "今天的冒险刚刚开始，先去看看宝箱和钻石奖励吧。",
+      "别急着错过刷新时间，先把下一次领取记进手账里。",
+      "今天还没有记录，不过没关系，从第一笔开始就很棒。",
+    ],
+    starting: [
+      "已经有 {total} 颗钻石入账了，小收获也算数，保持自己的节奏。",
+      "第一段进度已经写进手账，今天开了个好头。",
+      "今天已经收获 {total} 颗钻石，接下来慢慢来就好。",
+      "领取记录已经开始了，每一次小积累都会留在你的手账里。",
+    ],
+    steady: [
+      "今天已经收获 {total} 颗钻石，状态正在稳步上升。",
+      "目前的收获是 {total} 颗钻石，宝箱和每日任务都别忘了看看。",
+      "节奏不错，已经拿到 {total} 颗钻石了，继续保持。",
+      "每一次领取都在积累，今天的 {total} 颗钻石已经记好了。",
+    ],
+    strong: [
+      "今天已经收获 {total} 颗钻石，领取节奏很稳，也记得适当休息一下。",
+      "手账里的钻石来到了 {total} 颗，今天的冒险收获相当不错。",
+      "已经攒下 {total} 颗钻石了，按自己的节奏继续探索吧。",
+      "今天的进度很扎实，{total} 颗钻石已经成为你的记录。",
+    ],
+    excellent: [
+      "今天已经收获 {total} 颗钻石，效率和坚持都在线。",
+      "{total} 颗钻石入账，今天的手账已经很丰富了。",
+      "今天的收获达到 {total} 颗钻石，给自己一点掌声吧。",
+      "今天的冒险成果是 {total} 颗钻石，继续保持轻松的心态。",
+    ],
+    peak: [
+      "今天已经收获 {total} 颗钻石，这是一份很漂亮的成绩，也别忘了休息。",
+      "{total} 颗钻石，今天的你已经把每一次机会都认真记下来了。",
+      "手账今天格外充实：{total} 颗钻石。接下来的时间也按自己的节奏来。",
+      "今天的 {total} 颗钻石已经收入手账，做得很好，下一颗也顺其自然。",
+    ],
+  };
 
   const THEMES = [
     { id: "blue", name: "经典蓝", swatch: "#2f7dff", accent: "#2f7dff", strong: "#1f6bff", soft: "#eaf3ff" },
@@ -46,8 +128,10 @@
     chestCount: $("#chestCount"),
     diamondCount: $("#diamondCount"),
     chestDiamonds: $("#chestDiamonds"),
-    fixedDiamonds: $("#fixedDiamonds"),
     formulaTotal: $("#formulaTotal"),
+    sourceDiamonds: $("#sourceDiamonds"),
+    dailyTaskSlot: $("#dailyTaskSlot"),
+    sourceGrid: $("#sourceGrid"),
     profileSheet: $("#profileSheet"),
     settingsSheet: $("#settingsSheet"),
     qqGroupSheet: $("#qqGroupSheet"),
@@ -56,6 +140,13 @@
     ledgerSummary: $("#ledgerSummary"),
     ledgerList: $("#ledgerList"),
     celebrationCanvas: $("#celebrationCanvas"),
+    rewardFlightLayer: $("#rewardFlightLayer"),
+    rewardTotalFloat: $("#rewardTotalFloat"),
+    rewardTotalValue: $("#rewardTotalValue"),
+    rewardTotalGain: $("#rewardTotalGain"),
+    sourceUndoToast: $("#sourceUndoToast"),
+    sourceUndoText: $("#sourceUndoText"),
+    sourceUndoBtn: $("#sourceUndoBtn"),
     profileAvatarImage: $("#profileAvatarImage"),
     profileAvatarFallback: $("#profileAvatarFallback"),
     pageAvatarImage: $("#pageAvatarImage"),
@@ -67,6 +158,7 @@
     chestDurationInput: $("#chestDurationInput"),
     diamondDurationInput: $("#diamondDurationInput"),
     darkModeToggle: $("#darkModeToggle"),
+    dailyTaskVisibilityToggle: $("#dailyTaskVisibilityToggle"),
     notificationSettings: $("#notificationSettings"),
     notificationToggle: $("#notificationToggle"),
     notificationStatus: $("#notificationStatus"),
@@ -89,6 +181,7 @@
     pointTotal: $("#pointTotal"),
     pointChest: $("#pointChest"),
     pointDiamond: $("#pointDiamond"),
+    pointExtra: $("#pointExtra"),
     pointDelta: $("#pointDelta"),
   };
 
@@ -106,6 +199,11 @@
   let celebrationContext = null;
   let serviceWorkerRegistration = null;
   let notificationTimer = 0;
+  let sourceCooldownTimer = 0;
+  let sourceRenderTimer = 0;
+  let rewardTotalTimer = 0;
+  let sourceUndoTimer = 0;
+  let sourceUndoState = null;
 
   const runtime = {
     undo: { chest: null, diamond: null },
@@ -114,6 +212,7 @@
     selectedDayOffset: 0,
     trendRange: 7,
     notificationPending: new Set(),
+    assistantKey: "",
   };
 
   function defaultData() {
@@ -124,9 +223,11 @@
         theme: "blue",
         dark: false,
         notifications: false,
-        durations: { chest: 60, diamond: 30 },
+        showDailyTask: true,
+        durations: { chest: 70, diamond: 45 },
       },
       current: { chest: null, diamond: null },
+      sourceRate: { boss: [], seed: [], "bonus-chest": [] },
     };
   }
 
@@ -150,6 +251,7 @@
         },
       },
       current: { ...fallback.current, ...(source.current || {}) },
+      sourceRate: { ...fallback.sourceRate, ...(source.sourceRate || {}) },
     };
 
     result.profile.nickname =
@@ -159,6 +261,7 @@
     }
     result.settings.dark = Boolean(result.settings.dark);
     result.settings.notifications = Boolean(result.settings.notifications);
+    result.settings.showDailyTask = result.settings.showDailyTask !== false;
     for (const kind of ["chest", "diamond"]) {
       const duration = Number(result.settings.durations[kind]);
       result.settings.durations[kind] =
@@ -180,6 +283,16 @@
           notificationSentFor: Number(current.notificationSentFor) || 0,
         };
       }
+    }
+    for (const extraSource of EXTRA_SOURCES) {
+      if (!extraSource.rateLimit) continue;
+      const timestamps = Array.isArray(result.sourceRate[extraSource.id])
+        ? result.sourceRate[extraSource.id]
+        : [];
+      result.sourceRate[extraSource.id] = timestamps
+        .map(Number)
+        .filter(Number.isFinite)
+        .slice(-extraSource.rateLimit.max);
     }
     return result;
   }
@@ -382,6 +495,21 @@
     return event?.type === "diamond" ? 2 : 1;
   }
 
+  function sourceForEvent(event) {
+    return event?.type === "source" ? EXTRA_SOURCE_BY_ID.get(event.sourceId) || null : null;
+  }
+
+  function extraSourceIconMarkup(source) {
+    if (source.icon) {
+      return `<img src="${source.icon}" alt="" />`;
+    }
+    return `
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M5 12h22v15H5zM3.5 8.5h25V13h-25zM16 8.5V27M16 8.5c-5.5 0-8-2-6.5-4.5C11 1.5 15 2.5 16 8.5Zm0 0c5.5 0 8-2 6.5-4.5C21 1.5 17 2.5 16 8.5Z" />
+      </svg>
+    `;
+  }
+
   function eventsInRange(sourceEvents, range) {
     return sourceEvents.filter(
       (event) =>
@@ -412,6 +540,9 @@
         .reduce((sum, event) => sum + eventReward(event), 0),
       diamond: dayEvents
         .filter((event) => event.type === "diamond")
+        .reduce((sum, event) => sum + eventReward(event), 0),
+      extra: dayEvents
+        .filter((event) => event.type === "source")
         .reduce((sum, event) => sum + eventReward(event), 0),
     };
   }
@@ -451,6 +582,7 @@
     elements.pointTotal.innerHTML = `${selected.total} <small>钻石</small>`;
     elements.pointChest.textContent = String(detail.chest);
     elements.pointDiamond.textContent = String(detail.diamond);
+    elements.pointExtra.textContent = String(detail.extra);
     elements.pointDelta.textContent =
       delta > 0
         ? `较前一天 +${delta}`
@@ -784,7 +916,12 @@
   function diamondTotalInWindow(sourceEvents, now = Date.now()) {
     const cutoff = now - 60000;
     return sourceEvents
-      .filter((event) => Number(event.claimedAt) > cutoff && Number(event.claimedAt) <= now)
+      .filter(
+        (event) =>
+          event.type !== "source" &&
+          Number(event.claimedAt) > cutoff &&
+          Number(event.claimedAt) <= now
+      )
       .reduce((total, event) => total + (Number(event.reward) || 0), 0);
   }
 
@@ -808,27 +945,22 @@
       `);
     }
 
-    const undoButtons = [];
+    let hasUndo = false;
     for (const kind of ["chest", "diamond"]) {
       const undo = runtime.undo[kind];
       if (undo && now < undo.expiresAt) {
-        const label = kind === "chest" ? "宝箱" : "钻石";
-        undoButtons.push(
-          `<button class="undo-chip" type="button" data-undo-kind="${kind}">撤回${label} · <span>${remainingSeconds(undo.expiresAt)}</span>s</button>`
-        );
+        hasUndo = true;
       } else if (undo) {
         runtime.undo[kind] = null;
       }
     }
     if (runtime.batchUndo && now < runtime.batchUndo.expiresAt) {
-      undoButtons.push(
-        `<button class="undo-chip" type="button" data-undo-batch="1">撤回双领 · <span>${remainingSeconds(runtime.batchUndo.expiresAt)}</span>s</button>`
-      );
+      hasUndo = true;
     } else if (runtime.batchUndo) {
       runtime.batchUndo = null;
     }
 
-    if (!parts.length && !undoButtons.length) {
+    if (!parts.length && !hasUndo) {
       elements.actionDock.innerHTML = `
         <button
           class="combined-button dock-combined-button"
@@ -859,10 +991,14 @@
         ${completion}
         <div class="action-dock-meta">
           <span class="rolling-limit">近 60 秒 ${recentTotal}/6 钻石</span>
-          <div class="undo-actions">${undoButtons.join("")}</div>
         </div>
       </div>
     `;
+  }
+
+  function pickAssistantMessage(messages, seed) {
+    const mixed = Math.imul(seed ^ 0x9e3779b9, 2654435761) >>> 0;
+    return messages[mixed % messages.length];
   }
 
   function renderAssistant() {
@@ -872,19 +1008,408 @@
     );
     const chestEvents = todayEvents.filter((event) => event.type === "chest");
     const diamondEvents = todayEvents.filter((event) => event.type === "diamond");
-    const chestDiamonds = chestEvents.reduce(
-      (total, event) => total + ([0, 1, 2].includes(Number(event.reward)) ? Number(event.reward) : 1),
-      0
-    );
-    const totalDiamonds = chestDiamonds + diamondEvents.length * 2;
+    const sourceEvents = todayEvents.filter((event) => event.type === "source");
+    const totalDiamonds = todayEvents.reduce((total, event) => total + eventReward(event), 0);
+    let pool = ASSISTANT_MESSAGES.empty;
+    if (totalDiamonds >= 60) pool = ASSISTANT_MESSAGES.peak;
+    else if (totalDiamonds >= 30) pool = ASSISTANT_MESSAGES.excellent;
+    else if (totalDiamonds >= 15) pool = ASSISTANT_MESSAGES.strong;
+    else if (totalDiamonds >= 5) pool = ASSISTANT_MESSAGES.steady;
+    else if (totalDiamonds > 0) pool = ASSISTANT_MESSAGES.starting;
 
-    if (!todayEvents.length) {
-      elements.assistantText.textContent =
-        "今天还没有领取记录。领完奖励后点一下“下一个”，我来帮你统计今日收获。";
+    const key = [
+      start,
+      totalDiamonds,
+      chestEvents.length,
+      diamondEvents.length,
+      sourceEvents.length,
+      data.settings.showDailyTask ? 1 : 0,
+    ].join(":");
+    if (key === runtime.assistantKey) return;
+    runtime.assistantKey = key;
+
+    const seed =
+      Math.floor(start / 86400000) +
+      totalDiamonds * 7 +
+      chestEvents.length * 11 +
+      diamondEvents.length * 13 +
+      sourceEvents.length * 17;
+    let message = pickAssistantMessage(pool, seed);
+    message = message
+      .replaceAll("{total}", String(totalDiamonds))
+      .replaceAll("{chest}", String(chestEvents.length))
+      .replaceAll("{diamond}", String(diamondEvents.length));
+
+    if (
+      data.settings.showDailyTask &&
+      totalDiamonds > 0 &&
+      extraSourceCountToday("daily-task") === 0
+    ) {
+      message += " 每日任务今天还没有记录，别忘了去看看。";
+    }
+    elements.assistantText.textContent = message;
+  }
+
+  function extraSourceCountToday(sourceId) {
+    const start = dateStartFor("day");
+    return events.filter(
+      (event) =>
+        event.type === "source" &&
+        event.sourceId === sourceId &&
+        Number(event.claimedAt) >= start
+    ).length;
+  }
+
+  function todayDiamondTotal() {
+    const start = dateStartFor("day");
+    return events
+      .filter((event) => Number(event.claimedAt) >= start && Number(event.claimedAt) <= Date.now())
+      .reduce((total, event) => total + eventReward(event), 0);
+  }
+
+  function showRewardTotal(total, gain = 1, caption = "") {
+    if (!elements.rewardTotalFloat) return;
+    window.clearTimeout(rewardTotalTimer);
+    elements.rewardTotalValue.textContent = String(total);
+    elements.rewardTotalGain.textContent =
+      caption || `本次 ${gain >= 0 ? "+" : ""}${gain}`;
+    elements.rewardTotalFloat.hidden = false;
+    elements.rewardTotalFloat.classList.remove("show");
+    void elements.rewardTotalFloat.offsetWidth;
+    elements.rewardTotalFloat.classList.add("show");
+    rewardTotalTimer = window.setTimeout(() => {
+      elements.rewardTotalFloat.classList.remove("show");
+      window.setTimeout(() => {
+        if (!elements.rewardTotalFloat.classList.contains("show")) {
+          elements.rewardTotalFloat.hidden = true;
+        }
+      }, 220);
+    }, 2400);
+  }
+
+  function animateDiamondsToTotal(button, reward, total) {
+    if (!button || !elements.rewardFlightLayer || !elements.rewardTotalFloat) {
+      showRewardTotal(total, reward);
       return;
     }
-    elements.assistantText.textContent =
-      `今日已领宝箱 ${chestEvents.length} 次、钻石奖励 ${diamondEvents.length} 次，共收获 ${totalDiamonds} 钻石。继续加油！`;
+    const buttonRect = button.getBoundingClientRect();
+    if (!buttonRect.width || !buttonRect.height) {
+      showRewardTotal(total, reward);
+      return;
+    }
+
+    showRewardTotal(total, reward);
+    const targetRect = elements.rewardTotalFloat.getBoundingClientRect();
+    const targetDiamond = elements.rewardTotalFloat.querySelector("img");
+    const diamondRect = targetDiamond?.getBoundingClientRect();
+    const targetX = diamondRect
+      ? diamondRect.left + diamondRect.width / 2
+      : targetRect.left + targetRect.width / 2;
+    const targetY = diamondRect
+      ? diamondRect.top + diamondRect.height / 2
+      : targetRect.top + targetRect.height / 2;
+    const startX = buttonRect.left + buttonRect.width / 2;
+    const startY = buttonRect.top + buttonRect.height * 0.42;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const flightFrameMs = 1000 / 120;
+    const duration = reducedMotion ? 280 : 1180;
+    const stagger = reducedMotion ? 24 : 110;
+    const flights = [];
+
+    for (let index = 0; index < reward; index += 1) {
+      const diamond = document.createElement("img");
+      diamond.className = "flying-diamond";
+      diamond.src = "./assets/diamond.png";
+      diamond.alt = "";
+      diamond.draggable = false;
+      const sourceX = startX + (index - (reward - 1) / 2) * 7;
+      diamond.style.left = `${sourceX}px`;
+      diamond.style.top = `${startY}px`;
+      elements.rewardFlightLayer.appendChild(diamond);
+      flights.push({
+        element: diamond,
+        sourceX,
+        sourceY: startY,
+        deltaX: targetX - startX,
+        deltaY: targetY - startY,
+        delay: index * stagger,
+        done: false,
+      });
+    }
+
+    const startedAt = performance.now();
+    const frame = (now) => {
+      for (const flight of flights) {
+        if (flight.done) continue;
+        const elapsed = now - startedAt - flight.delay;
+        if (elapsed < 0) continue;
+        const quantizedElapsed = Math.floor(elapsed / flightFrameMs) * flightFrameMs;
+        const progress = Math.min(1, quantizedElapsed / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const x = flight.sourceX + flight.deltaX * eased;
+        const y = flight.sourceY + flight.deltaY * eased - Math.sin(Math.PI * progress) * 42;
+        const scale = 0.62 + Math.sin(Math.PI * Math.min(progress * 1.35, 1)) * 0.5;
+        const opacity =
+          progress < 0.1
+            ? progress / 0.1
+            : Math.max(0, 1 - Math.max(0, progress - 0.7) / 0.3);
+        flight.element.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        flight.element.style.left = `${x}px`;
+        flight.element.style.top = `${y}px`;
+        flight.element.style.opacity = String(opacity);
+        if (progress >= 1) {
+          flight.done = true;
+          flight.element.remove();
+        }
+      }
+
+      if (flights.some((flight) => !flight.done)) {
+        window.requestAnimationFrame(frame);
+      }
+    };
+    window.requestAnimationFrame(frame);
+  }
+
+  function triggerSourceFeedback(button, success) {
+    if (!button) return;
+    button.classList.remove("is-rewarded", "is-blocked");
+    void button.offsetWidth;
+    button.classList.add(success ? "is-rewarded" : "is-blocked");
+    window.setTimeout(() => {
+      button.classList.remove("is-rewarded", "is-blocked");
+    }, success ? 520 : 340);
+  }
+
+  function scheduleSourceRender(delay = 230) {
+    window.clearTimeout(sourceRenderTimer);
+    sourceRenderTimer = window.setTimeout(renderExtraSources, delay);
+  }
+
+  function renderExtraSources() {
+    if (!elements.sourceGrid || !elements.dailyTaskSlot) return;
+    window.clearTimeout(sourceCooldownTimer);
+    sourceCooldownTimer = 0;
+    const now = Date.now();
+    let nextAvailableAt = Number.POSITIVE_INFINITY;
+    const dailyTask = EXTRA_SOURCE_BY_ID.get("daily-task");
+    const dailyCount = extraSourceCountToday(dailyTask.id);
+    const dailyDisabled = dailyCount >= dailyTask.dailyLimit;
+    elements.dailyTaskSlot.hidden = !data.settings.showDailyTask;
+
+    elements.dailyTaskSlot.innerHTML = `
+      <button
+        class="daily-task-action${dailyDisabled ? " is-completed" : ""}"
+        type="button"
+        data-source-id="${dailyTask.id}"
+        aria-label="每日任务，点击获得 ${dailyTask.reward} 钻石，今日 ${dailyCount}/${dailyTask.dailyLimit}"
+        aria-disabled="${dailyDisabled}"
+      >
+        <span class="daily-task-icon">
+          <img src="${dailyTask.icon}" alt="" />
+        </span>
+        <span class="daily-task-copy">
+          <strong>每日任务</strong>
+          <small>${dailyDisabled ? "今日已完成 · 明日 00:00 重置" : "每日任务可领取 5 钻石"}</small>
+        </span>
+        <span class="daily-task-reward">
+          <img src="./assets/diamond.png" alt="" />
+          <span><b>+${dailyTask.reward}</b><small>今日 ${dailyCount}/${dailyTask.dailyLimit}</small></span>
+        </span>
+      </button>
+    `;
+
+    elements.sourceGrid.innerHTML = EXTRA_SOURCES.filter(
+      (source) => source.id !== dailyTask.id
+    ).map((source) => {
+      const todayCount = source.dailyLimit ? extraSourceCountToday(source.id) : 0;
+      let state = "每次 +1";
+      let disabled = false;
+
+      if (source.dailyLimit) {
+        disabled = todayCount >= source.dailyLimit;
+        state = disabled
+          ? `今日 ${todayCount}/${source.dailyLimit} · 明日再来`
+          : `今日 ${todayCount}/${source.dailyLimit}`;
+      } else if (source.rateLimit) {
+        const recent = (data.sourceRate[source.id] || [])
+          .map(Number)
+          .filter((timestamp) => Number.isFinite(timestamp) && timestamp > now - source.rateLimit.windowMs);
+        data.sourceRate[source.id] = recent;
+        disabled = recent.length >= source.rateLimit.max;
+        if (disabled && recent.length) {
+          const remainingSeconds = Math.max(
+            1,
+            Math.ceil((recent[0] + source.rateLimit.windowMs - now) / 1000)
+          );
+          state = `${remainingSeconds} 秒后可再点`;
+          nextAvailableAt = Math.min(
+            nextAvailableAt,
+            recent[0] + source.rateLimit.windowMs
+          );
+        } else {
+          state = recent.length
+            ? `5秒内 ${recent.length}/${source.rateLimit.max}`
+            : "5秒限 2 次";
+        }
+      }
+      const stateClass = disabled
+        ? source.dailyLimit
+          ? " is-completed"
+          : " is-cooldown"
+        : "";
+
+      return `
+        <button
+          class="source-action${stateClass}"
+          type="button"
+          data-source-id="${source.id}"
+          aria-label="${source.name}，点击获得 ${source.reward} 钻石，${state}"
+          aria-disabled="${disabled}"
+        >
+          <span class="source-gain">+${source.reward}</span>
+          <span class="source-icon">${extraSourceIconMarkup(source)}</span>
+          <span class="source-name">${source.name}</span>
+          <span class="source-state">${state}</span>
+        </button>
+      `;
+    }).join("");
+
+    if (Number.isFinite(nextAvailableAt)) {
+      sourceCooldownTimer = window.setTimeout(
+        renderExtraSources,
+        Math.max(250, nextAvailableAt - now + 100)
+      );
+    }
+  }
+
+  async function addExtraDiamond(sourceId, button) {
+    const source = EXTRA_SOURCE_BY_ID.get(sourceId);
+    if (!source) return;
+    const now = Date.now();
+    const previousRate = source.rateLimit
+      ? [...(data.sourceRate[source.id] || [])]
+      : null;
+
+    if (source.dailyLimit && extraSourceCountToday(source.id) >= source.dailyLimit) {
+      triggerSourceFeedback(button, false);
+      triggerHapticFeedback("warning");
+      showToast(`${source.name}今天的次数已用完`);
+      return;
+    }
+
+    if (source.rateLimit) {
+      const recent = (data.sourceRate[source.id] || [])
+        .map(Number)
+        .filter((timestamp) => Number.isFinite(timestamp) && timestamp > now - source.rateLimit.windowMs);
+      if (recent.length >= source.rateLimit.max) {
+        triggerSourceFeedback(button, false);
+        triggerHapticFeedback("warning");
+        showToast(`${source.name}点击太快，请稍后再试`);
+        data.sourceRate[source.id] = recent;
+        return;
+      }
+      data.sourceRate[source.id] = [...recent, now];
+    }
+
+    const event = {
+      id: uid(source.id),
+      type: "source",
+      sourceId: source.id,
+      sourceName: source.name,
+      claimedAt: now,
+      duration: 0,
+      reward: source.reward,
+    };
+    events.push(event);
+    saveData();
+    const persistPromise = putEvent(event);
+    const total = todayDiamondTotal();
+    button?.setAttribute("aria-disabled", "true");
+    triggerSourceFeedback(button, true);
+    triggerHapticFeedback(source.reward >= 5 ? "both" : "single");
+    launchCelebration(button);
+    renderAssistant();
+    renderAnalytics();
+    if (elements.ledgerSheet.classList.contains("open")) renderLedger();
+    window.setTimeout(() => animateDiamondsToTotal(button, source.reward, total), 130);
+    scheduleSourceRender(520);
+    showSourceUndo(source, event, previousRate, persistPromise);
+
+    try {
+      await persistPromise;
+    } catch (error) {
+      console.error(error);
+      showToast("钻石已记录，但本地数据库写入失败");
+    }
+  }
+
+  function hideSourceUndo({ clearState = true } = {}) {
+    window.clearTimeout(sourceUndoTimer);
+    sourceUndoTimer = 0;
+    if (!elements.sourceUndoToast) return;
+    elements.sourceUndoToast.classList.remove("show");
+    window.setTimeout(() => {
+      if (!elements.sourceUndoToast.classList.contains("show")) {
+        elements.sourceUndoToast.hidden = true;
+      }
+    }, 180);
+    if (clearState) sourceUndoState = null;
+  }
+
+  function displayUndoToast(message, state) {
+    if (!elements.sourceUndoToast) return;
+    window.clearTimeout(sourceUndoTimer);
+    sourceUndoState = state;
+    elements.sourceUndoText.textContent = message;
+    elements.sourceUndoToast.hidden = false;
+    elements.sourceUndoToast.classList.remove("show");
+    void elements.sourceUndoToast.offsetWidth;
+    elements.sourceUndoToast.classList.add("show");
+    sourceUndoTimer = window.setTimeout(() => hideSourceUndo(), 5000);
+  }
+
+  function showSourceUndo(source, event, previousRate, persistPromise) {
+    displayUndoToast(`${source.name} +${source.reward} 钻石`, {
+      type: "source",
+      event,
+      source,
+      previousRate,
+      persistPromise,
+    });
+  }
+
+  function showClaimUndo(message, kind) {
+    displayUndoToast(message, { type: "claim", kind });
+  }
+
+  async function undoLastSource() {
+    const undo = sourceUndoState;
+    if (!undo) return;
+    hideSourceUndo({ clearState: false });
+    if (undo.type === "claim") {
+      if (undo.kind === "batch") await undoBatch();
+      else await undoKind(undo.kind);
+      sourceUndoState = null;
+      return;
+    }
+    window.clearTimeout(sourceUndoTimer);
+    events = events.filter((event) => event.id !== undo.event.id);
+    if (undo.previousRate && undo.source.rateLimit) {
+      data.sourceRate[undo.source.id] = undo.previousRate;
+    }
+    saveData();
+    renderExtraSources();
+    renderAssistant();
+    renderAnalytics();
+    if (elements.ledgerSheet.classList.contains("open")) renderLedger();
+    hideSourceUndo();
+    showToast(`${undo.source.name}记录已撤销`);
+    try {
+      await undo.persistPromise;
+      await deleteEvents([undo.event.id]);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   function renderStats() {
@@ -892,12 +1417,14 @@
     const periodEvents = eventsInRange(events, range);
     const chestEvents = periodEvents.filter((event) => event.type === "chest");
     const diamondEvents = periodEvents.filter((event) => event.type === "diamond");
+    const sourceEvents = periodEvents.filter((event) => event.type === "source");
     const chestDiamonds = chestEvents.reduce(
       (total, event) => total + eventReward(event),
       0
     );
-    const fixedDiamonds = diamondEvents.length * 2;
-    const total = chestDiamonds + fixedDiamonds;
+    const fixedDiamonds = diamondEvents.reduce((total, event) => total + eventReward(event), 0);
+    const sourceDiamonds = sourceEvents.reduce((total, event) => total + eventReward(event), 0);
+    const total = chestDiamonds + fixedDiamonds + sourceDiamonds;
 
     elements.periodLabel.textContent =
       runtime.period === "day"
@@ -911,7 +1438,7 @@
     elements.chestCount.textContent = String(chestEvents.length);
     elements.diamondCount.textContent = String(diamondEvents.length);
     elements.chestDiamonds.textContent = String(chestDiamonds);
-    elements.fixedDiamonds.textContent = String(fixedDiamonds);
+    elements.sourceDiamonds.textContent = String(sourceDiamonds);
     elements.formulaTotal.textContent = `${total} 钻石`;
   }
 
@@ -1153,11 +1680,16 @@
         const date = new Date(event.claimedAt);
         const stamp = `${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(event.claimedAt)}`;
         const isChest = event.type === "chest";
+        const source = sourceForEvent(event);
+        const label = isChest ? "宝箱" : source ? source.name : "钻石奖励";
+        const iconMarkup = source
+          ? `<span class="ledger-icon source-ledger-icon">${extraSourceIconMarkup(source)}</span>`
+          : `<img class="ledger-icon" src="./assets/${isChest ? "chest" : "diamond"}.png" alt="" />`;
         return `
           <article class="ledger-item">
-            <img class="ledger-icon" src="./assets/${isChest ? "chest" : "diamond"}.png" alt="" />
+            ${iconMarkup}
             <div class="ledger-copy">
-              <strong>${isChest ? "宝箱" : "钻石奖励"}</strong>
+              <strong>${label}</strong>
               <span>${stamp}</span>
             </div>
             <span class="ledger-reward">+${Number(event.reward) || 0}<small>钻石</small></span>
@@ -1176,6 +1708,7 @@
   async function deleteDiamondRecord(id) {
     const record = events.find((event) => event.id === id);
     if (!record) return;
+    if (sourceUndoState?.event.id === id) hideSourceUndo();
     events = events.filter((event) => event.id !== id);
     for (const kind of ["chest", "diamond"]) {
       if (data.current[kind]?.eventId === id) {
@@ -1193,6 +1726,7 @@
     renderActionDock();
     renderAnalytics();
     renderAssistant();
+    renderExtraSources();
     renderLedger();
     showToast("钻石记录已删除");
     try {
@@ -1230,6 +1764,7 @@
     renderAvailability("diamond");
     renderActionDock();
     renderAssistant();
+    renderExtraSources();
     renderAnalytics();
     scheduleReminderCheck();
   }
@@ -1254,6 +1789,7 @@
   function triggerHapticFeedback(type = "single") {
     if (typeof navigator.vibrate !== "function") return false;
     try {
+      if (type === "warning") return navigator.vibrate(28);
       return navigator.vibrate(type === "both" ? [14, 28, 20] : 18);
     } catch (error) {
       console.warn("设备不支持震动反馈。", error);
@@ -1385,7 +1921,7 @@
   }
 
   function makeClaim(kind, now) {
-    const duration = clampDuration(data.settings.durations[kind], kind === "chest" ? 60 : 30);
+    const duration = clampDuration(data.settings.durations[kind], kind === "chest" ? 70 : 45);
     const id = uid(kind);
     const reward = 2;
     return {
@@ -1427,8 +1963,10 @@
     runtime.undo[kind === "chest" ? "diamond" : "chest"] = null;
     picker = kind === "chest" ? "chest" : null;
     saveData();
-    renderAll();
+    showClaimUndo(`${kind === "chest" ? "宝箱" : "钻石奖励"}记录已更新`, kind);
+    animateDiamondsToTotal(button, created.current.reward, todayDiamondTotal());
     launchCelebration(button);
+    renderAll();
     showToast(`已记录，预计 ${dateRelation(created.current.expectedAt)} ${formatTime(created.current.expectedAt)} 可领取`);
     try {
       await putEvent(created.event);
@@ -1462,8 +2000,14 @@
     };
     picker = "chest";
     saveData();
-    renderAll();
+    showClaimUndo("宝箱和钻石已一起记录", "batch");
+    animateDiamondsToTotal(
+      button,
+      chestClaim.current.reward + diamondClaim.current.reward,
+      todayDiamondTotal()
+    );
     launchCelebration(button);
+    renderAll();
     showToast("宝箱和钻石都已记录，宝箱收益默认按 2 钻石计算");
     try {
       await Promise.all([putEvent(chestClaim.event), putEvent(diamondClaim.event)]);
@@ -1477,6 +2021,7 @@
     const reward = [0, 1, 2].includes(Number(value)) ? Number(value) : 2;
     const current = data.current.chest;
     if (!current) return;
+    const previousReward = Number(current.reward) || 0;
     const event = events.find((item) => item.id === current.eventId);
     const candidateEvents = events.map((item) =>
       item.id === current.eventId ? { ...item, reward } : item
@@ -1490,7 +2035,14 @@
     picker = null;
     saveData();
     renderActionDock();
+    renderAssistant();
     renderAnalytics();
+    const delta = reward - previousReward;
+    showRewardTotal(
+      todayDiamondTotal(),
+      delta,
+      delta < 0 ? `本次扣除 ${Math.abs(delta)}` : `本次 +${reward}`
+    );
     showToast(`本次宝箱按 ${reward} 钻石记录`);
     if (event) {
       try {
@@ -1618,6 +2170,7 @@
     elements.chestDurationInput.value = String(data.settings.durations.chest);
     elements.diamondDurationInput.value = String(data.settings.durations.diamond);
     elements.darkModeToggle.checked = data.settings.dark;
+    elements.dailyTaskVisibilityToggle.checked = data.settings.showDailyTask;
     renderNotificationSettings();
     renderThemeGrid();
     openSheet(elements.settingsSheet);
@@ -1692,11 +2245,14 @@
       data.settings.durations.diamond
     );
     data.settings.dark = elements.darkModeToggle.checked;
+    data.settings.showDailyTask = elements.dailyTaskVisibilityToggle.checked;
     saveData();
     applyTheme();
     renderIntervals();
+    renderExtraSources();
+    renderAssistant();
     closeSheet(elements.settingsSheet);
-    showToast("设置已保存，新间隔从下次领取开始生效");
+    showToast("设置已保存");
   }
 
   function copyTextSync(text) {
@@ -1918,6 +2474,11 @@
         claimBoth(claimBothButton);
         return;
       }
+      const sourceButton = event.target.closest("[data-source-id]");
+      if (sourceButton) {
+        addExtraDiamond(sourceButton.dataset.sourceId, sourceButton);
+        return;
+      }
       const quantity = event.target.closest("[data-quantity]");
       if (quantity) {
         setChestReward(quantity.dataset.quantity);
@@ -2035,6 +2596,7 @@
     $("#saveSettingsBtn").addEventListener("click", saveSettings);
     $("#resetBtn").addEventListener("click", resetAllData);
     elements.installBtn.addEventListener("click", promptInstall);
+    elements.sourceUndoBtn.addEventListener("click", undoLastSource);
 
     elements.notificationToggle.addEventListener("change", async () => {
       if (!elements.notificationToggle.checked) {
@@ -2137,6 +2699,7 @@
         renderAvailability("chest");
         renderAvailability("diamond");
         renderAssistant();
+        renderExtraSources();
         renderAnalytics();
         checkDueNotifications();
         scheduleReminderCheck();
@@ -2155,11 +2718,18 @@
   }
 
   function registerServiceWorker() {
-    if (!("serviceWorker" in navigator) || !location.protocol.startsWith("http")) return;
+    if (
+      window.SG2Native ||
+      window.SG2_APK_SHELL ||
+      !("serviceWorker" in navigator) ||
+      !location.protocol.startsWith("http")
+    ) {
+      return;
+    }
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=11", { updateViaCache: "none" })
+        .register("./sw.js?v=24", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
@@ -2201,6 +2771,7 @@
       renderAvailability("chest");
       renderAvailability("diamond");
       renderAssistant();
+      renderExtraSources();
       checkDueNotifications();
       scheduleReminderCheck();
     }, 30000);
