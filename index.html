@@ -16,10 +16,11 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=37" />
+    <link rel="manifest" href="./manifest.webmanifest?v=38" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=37" />
+    <link rel="stylesheet" href="./styles.css?v=38" />
+    <link rel="preload" href="./assets/app-ui.ttf" as="font" type="font/ttf" crossorigin />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -612,7 +613,7 @@
         </div>
 
         <button class="primary-wide generate-report-button" id="generateReportBtn" type="button">
-          生成并导出 4K 简报
+          生成并保存 4K 简报
         </button>
         <p class="export-note">简报在设备本地生成，不会上传昵称、头像或领取记录。</p>
       </section>
@@ -636,6 +637,6 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=37" defer></script>
+    <script src="./app.js?v=38" defer></script>
   </body>
 </html>

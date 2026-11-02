@@ -1,12 +1,12 @@
 "use strict";
 
-const CACHE_NAME = "sg2-diamond-journal-v37";
+const CACHE_NAME = "sg2-diamond-journal-v38";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=37",
-  "./app.js?v=37",
-  "./manifest.webmanifest?v=37",
+  "./styles.css?v=38",
+  "./app.js?v=38",
+  "./manifest.webmanifest?v=38",
   "./assets/app-icon-192.png",
   "./assets/app-icon-512.png",
   "./assets/app-icon-180.png",
@@ -25,6 +25,7 @@ const APP_SHELL = [
   "./assets/source-daily-gift.png",
   "./assets/source-character-card.png",
   "./assets/task-icon.svg",
+  "./assets/app-ui.ttf",
 ];
 
 self.addEventListener("install", (event) => {

@@ -1163,11 +1163,11 @@
   }
 
   function reportFont(size, weight = 700) {
-    return `${weight} ${size}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif`;
+    return `${weight} ${size}px "SG2UI", "Microsoft YaHei", "PingFang SC", sans-serif`;
   }
 
   function reportNumberFont(size) {
-    return `950 ${size}px "Bahnschrift", "Arial Black", "Segoe UI Black", sans-serif`;
+    return `950 ${size}px "SG2UI", "Microsoft YaHei", "PingFang SC", sans-serif`;
   }
 
   function roundRectPath(context, x, y, width, height, radius) {
@@ -1378,6 +1378,13 @@
   }
 
   async function generateReportBlob(model) {
+    if (document.fonts?.load) {
+      await Promise.allSettled([
+        document.fonts.load('400 16px "SG2UI"'),
+        document.fonts.load('700 16px "SG2UI"'),
+        document.fonts.load('900 16px "SG2UI"'),
+      ]);
+    }
     const canvas = document.createElement("canvas");
     canvas.width = 3840;
     canvas.height = 2160;
@@ -1831,6 +1838,53 @@
     window.setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("图片读取失败"));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function saveReportImage(blob, fileName) {
+    const nativeBridge = window.SG2Native;
+    if (nativeBridge && typeof nativeBridge.saveImageToGallery === "function") {
+      try {
+        const dataUrl = await blobToDataUrl(blob);
+        const result = nativeBridge.saveImageToGallery(dataUrl, fileName);
+        if (result === "ok" || result === true) {
+          showToast("4K 简报已保存到相册");
+          return "gallery";
+        }
+        if (result === "permission") {
+          showToast("请允许照片和存储权限，然后再次导出");
+          return "permission";
+        }
+        console.warn("原生相册保存失败，改用文件下载。", result);
+      } catch (error) {
+        console.warn("原生相册保存异常，改用文件下载。", error);
+      }
+    }
+    if (isIOSDevice() && navigator.share) {
+      try {
+        const file = new File([blob], fileName, { type: "image/png" });
+        const payload = { files: [file], title: "钻石手账 4K 简报" };
+        if (!navigator.canShare || navigator.canShare(payload)) {
+          showToast("请在系统分享面板选择“存储图像”");
+          await navigator.share(payload);
+          return "shared";
+        }
+      } catch (error) {
+        if (error?.name === "AbortError") return "cancelled";
+        console.warn("iOS 图片分享失败，改用文件下载。", error);
+      }
+    }
+    downloadBlobFile(blob, fileName);
+    showToast(nativeBridge ? "无法直接写入相册，已改为下载 PNG" : "4K 简报已生成，正在下载");
+    return "download";
+  }
+
   async function exportReport() {
     const button = elements.generateReportBtn;
     if (button.disabled) return;
@@ -1840,8 +1894,7 @@
     try {
       const model = buildExportModel();
       const blob = await generateReportBlob(model);
-      downloadBlobFile(blob, reportFileName(model));
-      showToast("4K 简报已生成，正在下载");
+      await saveReportImage(blob, reportFileName(model));
     } catch (error) {
       console.error(error);
       showToast("简报生成失败，请稍后重试");
@@ -3428,13 +3481,17 @@
   }
 
   function openSettings() {
-    elements.chestDurationInput.value = String(data.settings.durations.chest);
-    elements.diamondDurationInput.value = String(data.settings.durations.diamond);
-    elements.darkModeToggle.checked = data.settings.dark;
-    elements.dailyTaskVisibilityToggle.checked = data.settings.showDailyTask;
-    renderNotificationSettings();
-    renderThemeGrid();
     openSheet(elements.settingsSheet);
+    try {
+      elements.chestDurationInput.value = String(data.settings.durations.chest);
+      elements.diamondDurationInput.value = String(data.settings.durations.diamond);
+      elements.darkModeToggle.checked = data.settings.dark;
+      elements.dailyTaskVisibilityToggle.checked = data.settings.showDailyTask;
+      renderNotificationSettings();
+      renderThemeGrid();
+    } catch (error) {
+      console.error("设置内容初始化失败，已保持设置面板打开。", error);
+    }
   }
 
   async function compressAvatar(file) {
@@ -4003,7 +4060,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=37", { updateViaCache: "none" })
+        .register("./sw.js?v=38", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
