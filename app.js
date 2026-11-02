@@ -1179,11 +1179,17 @@
   }
 
   function reportFont(size, weight = 700) {
-    return `${weight} ${size}px "SG2UI", "Microsoft YaHei", "PingFang SC", sans-serif`;
+    const family = document.documentElement.classList.contains("sg2-apk")
+      ? '"SG2UI", "Microsoft YaHei", sans-serif'
+      : '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+    return `${weight} ${size}px ${family}`;
   }
 
   function reportNumberFont(size) {
-    return `950 ${size}px "SG2UI", "Microsoft YaHei", "PingFang SC", sans-serif`;
+    const family = document.documentElement.classList.contains("sg2-apk")
+      ? '"SG2UI", "Microsoft YaHei", sans-serif'
+      : '"Bahnschrift", "Arial Black", "Segoe UI Black", sans-serif';
+    return `950 ${size}px ${family}`;
   }
 
   function roundRectPath(context, x, y, width, height, radius) {
@@ -4187,7 +4193,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=41", { updateViaCache: "none" })
+        .register("./sw.js?v=42", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
