@@ -197,6 +197,12 @@
     exportMockDays: $("#exportMockDays"),
     exportMockRecords: $("#exportMockRecords"),
     generateReportBtn: $("#generateReportBtn"),
+    reportPreviewSheet: $("#reportPreviewSheet"),
+    reportPreviewImage: $("#reportPreviewImage"),
+    reportPreviewHelp: $("#reportPreviewHelp"),
+    reportPreviewFileName: $("#reportPreviewFileName"),
+    reportPreviewShareBtn: $("#reportPreviewShareBtn"),
+    reportPreviewDoneBtn: $("#reportPreviewDoneBtn"),
   };
 
   let dbPromise = null;
@@ -218,6 +224,9 @@
   let rewardTotalTimer = 0;
   let sourceUndoTimer = 0;
   let sourceUndoState = null;
+  let reportPreviewBlob = null;
+  let reportPreviewFile = null;
+  let reportPreviewObjectUrl = "";
 
   const runtime = {
     undo: { chest: null, diamond: null },
@@ -1827,17 +1836,6 @@
     return `钻石手账-${range}-4K简报-${date}.png`;
   }
 
-  function downloadBlobFile(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1847,49 +1845,70 @@
     });
   }
 
-  async function saveReportImage(blob, fileName) {
-    const nativeBridge = window.SG2Native;
-    if (nativeBridge && typeof nativeBridge.saveImageToGallery !== "function") {
-      showToast("当前 APK 原生保存组件过旧，请安装 V1.2.1 修复包");
-      return "stale-apk";
+  function releaseReportPreview() {
+    reportPreviewBlob = null;
+    reportPreviewFile = null;
+    elements.reportPreviewImage.removeAttribute("src");
+    elements.reportPreviewFileName.textContent = "";
+    elements.reportPreviewShareBtn.hidden = true;
+    if (reportPreviewObjectUrl) {
+      const staleUrl = reportPreviewObjectUrl;
+      reportPreviewObjectUrl = "";
+      window.setTimeout(() => URL.revokeObjectURL(staleUrl), 240);
     }
-    if (nativeBridge) {
+  }
+
+  async function showReportPreview(blob, fileName) {
+    releaseReportPreview();
+    reportPreviewBlob = blob;
+    try {
+      reportPreviewFile = new File([blob], fileName, { type: "image/png" });
+    } catch (error) {
+      reportPreviewFile = null;
+    }
+
+    try {
+      elements.reportPreviewImage.src = await blobToDataUrl(blob);
+    } catch (error) {
+      reportPreviewObjectUrl = URL.createObjectURL(blob);
+      elements.reportPreviewImage.src = reportPreviewObjectUrl;
+    }
+
+    elements.reportPreviewFileName.textContent = fileName;
+    elements.reportPreviewHelp.textContent = isIOSDevice()
+      ? "长按图片，选择“存储到照片”；也可点击下方“打开系统分享”。"
+      : "长按图片约 2 秒，选择“保存图片”即可保存到相册；没有菜单时可截屏保存。";
+    const payload =
+      reportPreviewFile && typeof navigator.share === "function"
+        ? { files: [reportPreviewFile], title: "钻石手账 4K 简报" }
+        : null;
+    let canShare = Boolean(payload);
+    if (canShare && typeof navigator.canShare === "function") {
       try {
-        const dataUrl = await blobToDataUrl(blob);
-        const result = nativeBridge.saveImageToGallery(dataUrl, fileName);
-        if (result === "ok" || result === true) {
-          showToast("4K 简报已保存到相册");
-          return "gallery";
-        }
-        if (result === "permission") {
-          showToast("请允许照片和存储权限，然后再次导出");
-          return "permission";
-        }
-        showToast("相册保存失败，请确认已安装 V1.2.1 并检查存储空间");
-        return "native-error";
+        canShare = navigator.canShare(payload);
       } catch (error) {
-        console.error("原生相册保存异常。", error);
-        showToast("相册保存失败，请重新安装 V1.2.1 修复包");
-        return "native-error";
+        canShare = false;
       }
     }
-    if (isIOSDevice() && navigator.share) {
-      try {
-        const file = new File([blob], fileName, { type: "image/png" });
-        const payload = { files: [file], title: "钻石手账 4K 简报" };
-        if (!navigator.canShare || navigator.canShare(payload)) {
-          showToast("请在系统分享面板选择“存储图像”");
-          await navigator.share(payload);
-          return "shared";
-        }
-      } catch (error) {
-        if (error?.name === "AbortError") return "cancelled";
-        console.warn("iOS 图片分享失败，改用文件下载。", error);
+    elements.reportPreviewShareBtn.hidden = !canShare;
+
+    closeSheet(elements.exportReportSheet);
+    openSheet(elements.reportPreviewSheet);
+  }
+
+  async function shareReportPreview() {
+    if (!reportPreviewFile || typeof navigator.share !== "function") {
+      showToast("请长按图片保存到相册");
+      return;
+    }
+    try {
+      await navigator.share({ files: [reportPreviewFile], title: "钻石手账 4K 简报" });
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        console.warn("系统分享不可用，请长按图片保存。", error);
+        showToast("分享面板不可用，请长按图片保存");
       }
     }
-    downloadBlobFile(blob, fileName);
-    showToast(nativeBridge ? "无法直接写入相册，已改为下载 PNG" : "4K 简报已生成，正在下载");
-    return "download";
   }
 
   async function exportReport() {
@@ -1901,7 +1920,8 @@
     try {
       const model = buildExportModel();
       const blob = await generateReportBlob(model);
-      await saveReportImage(blob, reportFileName(model));
+      await showReportPreview(blob, reportFileName(model));
+      showToast("4K 简报已生成，长按图片即可保存");
     } catch (error) {
       console.error(error);
       showToast("简报生成失败，请稍后重试");
@@ -3424,6 +3444,9 @@
 
   function closeSheet(sheet) {
     sheet.classList.remove("open");
+    if (sheet === elements.reportPreviewSheet) {
+      releaseReportPreview();
+    }
     if (sheet === elements.profileSheet) {
       if (pendingAvatarUrl) {
         URL.revokeObjectURL(pendingAvatarUrl);
@@ -3904,6 +3927,13 @@
       openExportReport();
     });
     $("#generateReportBtn").addEventListener("click", exportReport);
+    $("#reportPreviewDoneBtn").addEventListener("click", () => {
+      closeSheet(elements.reportPreviewSheet);
+    });
+    $("#reportPreviewShareBtn").addEventListener("click", shareReportPreview);
+    elements.reportPreviewImage.addEventListener("contextmenu", (event) => {
+      event.stopPropagation();
+    });
     elements.exportYearSelect.addEventListener("change", renderExportPreview);
     elements.exportMonthSelect.addEventListener("change", renderExportPreview);
     $("#qqGroupBtn").addEventListener("click", () => openSheet(elements.qqGroupSheet));
@@ -4020,6 +4050,7 @@
       elements.qqGroupSheet,
       elements.ledgerSheet,
       elements.exportReportSheet,
+      elements.reportPreviewSheet,
     ].forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
         if (event.target === backdrop) closeSheet(backdrop);
@@ -4067,7 +4098,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=39", { updateViaCache: "none" })
+        .register("./sw.js?v=40", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();

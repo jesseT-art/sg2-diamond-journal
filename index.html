@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=39" />
+    <link rel="manifest" href="./manifest.webmanifest?v=40" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=39" />
+    <link rel="stylesheet" href="./styles.css?v=40" />
     <link rel="preload" href="./assets/app-ui.ttf" as="font" type="font/ttf" crossorigin />
   </head>
   <body>
@@ -564,7 +564,7 @@
           <button class="sheet-close" type="button" data-close-sheet="exportReportSheet" aria-label="关闭">×</button>
         </div>
 
-        <p class="export-intro">选择统计范围，系统会使用当前主题生成一张 3840×2160 的 PNG 简报。</p>
+        <p class="export-intro">选择统计范围，系统会生成一张 3840×2160 的 PNG 简报，并在预览中展示。</p>
         <div class="export-range-grid" role="group" aria-label="简报统计范围">
           <button class="active" type="button" data-export-range="day">今日</button>
           <button type="button" data-export-range="week">本周</button>
@@ -613,9 +613,32 @@
         </div>
 
         <button class="primary-wide generate-report-button" id="generateReportBtn" type="button">
-          生成并保存 4K 简报
+          生成 4K 简报预览
         </button>
-        <p class="export-note">简报在设备本地生成，不会上传昵称、头像或领取记录。</p>
+        <p class="export-note">生成后可长按图片自行保存到相册，不会上传昵称、头像或领取记录。</p>
+      </section>
+    </div>
+
+    <div class="sheet-backdrop report-preview-backdrop" id="reportPreviewSheet" role="dialog" aria-modal="true" aria-labelledby="reportPreviewTitle">
+      <section class="report-preview-dialog">
+        <div class="report-preview-header">
+          <div>
+            <span class="section-kicker">4K BRIEF READY</span>
+            <h2 id="reportPreviewTitle">简报已生成</h2>
+          </div>
+          <button class="sheet-close" type="button" data-close-sheet="reportPreviewSheet" aria-label="关闭">×</button>
+        </div>
+        <p class="report-preview-help" id="reportPreviewHelp">
+          长按下方图片，选择“保存图片”或“存储到照片”即可保存到相册。
+        </p>
+        <div class="report-preview-media">
+          <img class="report-preview-image" id="reportPreviewImage" alt="钻石手账 4K 数据简报" />
+        </div>
+        <p class="report-preview-file" id="reportPreviewFileName"></p>
+        <div class="report-preview-actions">
+          <button class="secondary-wide" id="reportPreviewShareBtn" type="button" hidden>打开系统分享</button>
+          <button class="primary-wide" id="reportPreviewDoneBtn" type="button">已完成</button>
+        </div>
       </section>
     </div>
 
@@ -637,6 +660,6 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=39" defer></script>
+    <script src="./app.js?v=40" defer></script>
   </body>
 </html>

@@ -4294,6 +4294,132 @@ html[data-mode="dark"] .export-preview-grid > div:first-child {
   text-align: center;
 }
 
+.report-preview-backdrop {
+  z-index: 85;
+  align-items: center;
+  padding: 16px;
+}
+
+.report-preview-backdrop.open {
+  background: rgba(5, 17, 34, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.report-preview-dialog {
+  width: min(100%, 1080px);
+  max-height: min(94dvh, 900px);
+  padding: 20px;
+  overflow: auto;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: 0 32px 100px rgba(4, 23, 48, 0.44);
+  opacity: 0;
+  transform: translateY(18px) scale(0.98);
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.report-preview-backdrop.open .report-preview-dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.report-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.report-preview-header h2 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.report-preview-help {
+  margin: 12px 0;
+  padding: 10px 12px;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.report-preview-media {
+  display: grid;
+  max-height: 64dvh;
+  overflow: auto;
+  place-items: center;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overscroll-behavior: contain;
+}
+
+.report-preview-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62dvh;
+  object-fit: contain;
+  border-radius: 10px;
+  -webkit-touch-callout: default;
+  -webkit-user-drag: auto;
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+.report-preview-file {
+  margin: 8px 2px 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-preview-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.report-preview-actions > button {
+  min-height: 48px;
+  margin: 0;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.report-preview-actions > button[hidden] {
+  display: none;
+}
+
+.report-preview-actions > button[hidden] + button {
+  grid-column: 1 / -1;
+}
+
+.report-preview-actions .secondary-wide {
+  color: var(--accent-strong);
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+}
+
+html[data-mode="dark"] .report-preview-media {
+  background: #fff;
+}
+
 @media (max-width: 350px) {
   .page-intro {
     gap: 6px;

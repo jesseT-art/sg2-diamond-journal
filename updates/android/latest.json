@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "assetVersion": 39,
+  "assetVersion": 40,
   "minApkVersionCode": 37,
-  "zipUrl": "https://jesseT-art.github.io/sg2-diamond-journal/updates/android/web-v39.zip",
-  "zipSha256": "a43bcafdad5808d99f250ec3609ee458fa3b983d11767f6af934f77fb096d67d",
-  "signature": "tB7Tft4N8G0NE8CmN0DLphoss3NheJXFQEPdMVH7BycNHbKkXGB9OmxGg+BYhcX5uErYH34lpYxzaYCaqQgNx7qTAhWOffroi3L695dRjDSTZf42d51rsSnGKV0eOvo0cPjsMjg487+rR9RPvmtGiW2ifYnomGMbHHlcF7Isy+7L6p9uT5GivgQj1os2pqMiDkPzjy+8HO1WPEp+ZSP+aVXFbKpbNIn+CUYrBgLJHbjxMiMeb4Rj/EwyRIM4UXhz9L3c+GTwc1nXMJyTw15LfCOTPU3M+KmF4ZkhY78ofXeceORH+UXfqje0dZ5HESHLC1C4ZSNsyM0aawqFC80WUQ==",
-  "publishedAt": "2026-11-02T14:10:54+08:00",
+  "zipUrl": "https://jesseT-art.github.io/sg2-diamond-journal/updates/android/web-v40.zip",
+  "zipSha256": "09349c1c18bdad32ddc11347a169e59fd8f970ac2919bc75ecea9438ad5c70da",
+  "signature": "PdPi2bqmhBhJfEYvpdzFY1LQm7dAu3qd6fSJaJqiIZzxNdKrLNdfPt1SVnbJFjNgM4dbLz+GeZ/Atf1timgfkgj1IFk99XdzpZUf6X+B6xPKcKzvwe2Ah0y0CSmQhGo0WewbtJTOEXCHunGF2OotMzEz80UfTmStSUTVZa1co/kBl1EMcCEdDa2Fhkx0SoYGXjfngmVLeHaoElg0+B5/bI19i/XmNpjDv0V4k7YV/bHUvVBo5dIOhA+dOY9tVvJ9QqGBkDa06NdPTI9L1Y9ZFvdi+R2NWziExxUkcruO5ATiQ6qmNC5M71dDS66Yc6uw8eEWDLdT2j4VAXKBguSq1g==",
+  "publishedAt": "2026-11-02T15:21:02+08:00",
   "notes": [
-    "网页热更新 v39"
+    "网页热更新 v40"
   ]
 }
