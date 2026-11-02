@@ -4387,6 +4387,69 @@ html[data-mode="dark"] .export-preview-grid > div:first-child {
   white-space: nowrap;
 }
 
+.report-image-action-scrim {
+  position: fixed;
+  z-index: 108;
+  inset: 0;
+  background: rgba(5, 17, 34, 0.56);
+  backdrop-filter: blur(5px);
+}
+
+.report-image-action-menu {
+  position: fixed;
+  z-index: 109;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  width: min(calc(100vw - 28px), 430px);
+  padding: 18px;
+  color: var(--text);
+  background: var(--surface-solid);
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgba(4, 23, 48, 0.48);
+  transform: translate(-50%, 12px) scale(0.98);
+  animation: report-image-action-in 180ms ease forwards;
+}
+
+.report-image-action-menu h3 {
+  margin: 5px 0 6px;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.report-image-action-menu p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.report-image-action-menu button {
+  width: 100%;
+}
+
+.report-image-action-cancel {
+  min-height: 42px;
+  margin-top: 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.report-image-action-scrim[hidden],
+.report-image-action-menu[hidden] {
+  display: none;
+}
+
+@keyframes report-image-action-in {
+  to {
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
 .report-preview-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

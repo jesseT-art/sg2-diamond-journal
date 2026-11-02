@@ -203,6 +203,10 @@
     reportPreviewFileName: $("#reportPreviewFileName"),
     reportPreviewShareBtn: $("#reportPreviewShareBtn"),
     reportPreviewDoneBtn: $("#reportPreviewDoneBtn"),
+    reportImageActionScrim: $("#reportImageActionScrim"),
+    reportImageActionMenu: $("#reportImageActionMenu"),
+    reportImageSaveBtn: $("#reportImageSaveBtn"),
+    reportImageActionCancelBtn: $("#reportImageActionCancelBtn"),
   };
 
   let dbPromise = null;
@@ -226,7 +230,10 @@
   let sourceUndoState = null;
   let reportPreviewBlob = null;
   let reportPreviewFile = null;
+  let reportPreviewDataUrl = "";
+  let reportPreviewName = "";
   let reportPreviewObjectUrl = "";
+  let reportLongPressTimer = 0;
 
   const runtime = {
     undo: { chest: null, diamond: null },
@@ -1845,9 +1852,38 @@
     });
   }
 
+  function downloadBlobFile(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  function hideReportImageActions() {
+    window.clearTimeout(reportLongPressTimer);
+    reportLongPressTimer = 0;
+    elements.reportImageActionScrim.hidden = true;
+    elements.reportImageActionMenu.hidden = true;
+  }
+
+  function openReportImageActions() {
+    if (!reportPreviewBlob) return;
+    window.clearTimeout(reportLongPressTimer);
+    reportLongPressTimer = 0;
+    elements.reportImageActionScrim.hidden = false;
+    elements.reportImageActionMenu.hidden = false;
+  }
+
   function releaseReportPreview() {
+    hideReportImageActions();
     reportPreviewBlob = null;
     reportPreviewFile = null;
+    reportPreviewDataUrl = "";
+    reportPreviewName = "";
     elements.reportPreviewImage.removeAttribute("src");
     elements.reportPreviewFileName.textContent = "";
     elements.reportPreviewShareBtn.hidden = true;
@@ -1861,6 +1897,7 @@
   async function showReportPreview(blob, fileName) {
     releaseReportPreview();
     reportPreviewBlob = blob;
+    reportPreviewName = fileName;
     try {
       reportPreviewFile = new File([blob], fileName, { type: "image/png" });
     } catch (error) {
@@ -1868,7 +1905,8 @@
     }
 
     try {
-      elements.reportPreviewImage.src = await blobToDataUrl(blob);
+      reportPreviewDataUrl = await blobToDataUrl(blob);
+      elements.reportPreviewImage.src = reportPreviewDataUrl;
     } catch (error) {
       reportPreviewObjectUrl = URL.createObjectURL(blob);
       elements.reportPreviewImage.src = reportPreviewObjectUrl;
@@ -1876,8 +1914,8 @@
 
     elements.reportPreviewFileName.textContent = fileName;
     elements.reportPreviewHelp.textContent = isIOSDevice()
-      ? "长按图片，选择“存储到照片”；也可点击下方“打开系统分享”。"
-      : "长按图片约 2 秒，选择“保存图片”即可保存到相册；没有菜单时可截屏保存。";
+      ? "长按图片约 2 秒，在弹出窗口中选择“保存到系统相册”；也可使用系统分享。"
+      : "长按图片约 2 秒，在弹出窗口中选择“保存到系统相册”；失败时可截屏保存。";
     const payload =
       reportPreviewFile && typeof navigator.share === "function"
         ? { files: [reportPreviewFile], title: "钻石手账 4K 简报" }
@@ -1894,6 +1932,42 @@
 
     closeSheet(elements.exportReportSheet);
     openSheet(elements.reportPreviewSheet);
+  }
+
+  async function saveReportPreviewToDevice() {
+    hideReportImageActions();
+    const nativeBridge = window.SG2Native;
+    if (
+      nativeBridge &&
+      typeof nativeBridge.saveImageToGallery === "function" &&
+      reportPreviewDataUrl
+    ) {
+      try {
+        const result = nativeBridge.saveImageToGallery(reportPreviewDataUrl, reportPreviewName);
+        if (result === "ok" || result === true) {
+          showToast("4K 简报已保存到相册");
+          return;
+        }
+        if (result === "permission") {
+          showToast("请允许照片或存储权限，然后再次保存");
+          return;
+        }
+      } catch (error) {
+        console.error("原生相册保存失败。", error);
+      }
+    }
+    if (reportPreviewFile && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ files: [reportPreviewFile], title: "钻石手账 4K 简报" });
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    if (reportPreviewBlob) {
+      downloadBlobFile(reportPreviewBlob, reportPreviewName);
+      showToast("已发起图片下载；若未保存，请截屏保存当前预览");
+    }
   }
 
   async function shareReportPreview() {
@@ -3931,8 +4005,23 @@
       closeSheet(elements.reportPreviewSheet);
     });
     $("#reportPreviewShareBtn").addEventListener("click", shareReportPreview);
+    $("#reportImageSaveBtn").addEventListener("click", saveReportPreviewToDevice);
+    $("#reportImageActionCancelBtn").addEventListener("click", hideReportImageActions);
+    elements.reportImageActionScrim.addEventListener("click", hideReportImageActions);
+    elements.reportPreviewImage.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      window.clearTimeout(reportLongPressTimer);
+      reportLongPressTimer = window.setTimeout(openReportImageActions, 650);
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+      elements.reportPreviewImage.addEventListener(eventName, () => {
+        window.clearTimeout(reportLongPressTimer);
+        reportLongPressTimer = 0;
+      });
+    });
     elements.reportPreviewImage.addEventListener("contextmenu", (event) => {
-      event.stopPropagation();
+      event.preventDefault();
+      openReportImageActions();
     });
     elements.exportYearSelect.addEventListener("change", renderExportPreview);
     elements.exportMonthSelect.addEventListener("change", renderExportPreview);
@@ -4098,7 +4187,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=40", { updateViaCache: "none" })
+        .register("./sw.js?v=41", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
