@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=26" />
+    <link rel="manifest" href="./manifest.webmanifest?v=27" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=26" />
+    <link rel="stylesheet" href="./styles.css?v=27" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -64,13 +64,6 @@
 
       <main class="page-stack">
         <section class="page-view active" data-page-view="rewards" aria-label="奖励记录">
-        <section class="companion-strip" aria-label="手账陪伴与累计钻石">
-          <span>钻石手账已经陪伴您 <strong id="companionDays">1</strong> 天</span>
-          <span class="companion-total">
-            <img src="./assets/diamond.png" alt="" />
-            累计获得 <strong id="companionTotal">0</strong>
-          </span>
-        </section>
         <section class="user-strip" aria-label="个人信息">
           <button class="profile-button" id="profileBtn" type="button">
             <span class="avatar" id="headerAvatar">
@@ -91,6 +84,14 @@
             </svg>
             一键加群
           </button>
+        </section>
+
+        <section class="companion-strip" aria-label="手账陪伴与累计钻石">
+          <span>钻石手账已经陪伴您 <strong id="companionDays">1</strong> 天</span>
+          <span class="companion-total">
+            <img src="./assets/diamond.png" alt="" />
+            累计获得 <strong id="companionTotal">0</strong>
+          </span>
         </section>
 
         <section class="assistant-card" aria-label="像素小助手">
@@ -203,22 +204,17 @@
               <h2>数据洞察</h2>
               <p>按天查看收获，发现你的领取节奏。</p>
             </div>
+            <div class="page-action-group">
+              <button class="page-action-button" id="exportReportBtn" type="button">
+                导出简报
+                <span aria-hidden="true">↗</span>
+              </button>
+              <button class="page-action-button" id="dataLedgerBtn" type="button">
+                钻石明细
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
           </div>
-
-        <div class="data-toolbar" aria-label="数据工具">
-          <button class="data-tool-button" id="yearReviewBtn" type="button">
-            <span class="data-tool-icon" aria-hidden="true">年</span>
-            <span><strong>年度回顾</strong><small>按月查看</small></span>
-          </button>
-          <button class="data-tool-button" id="exportReportBtn" type="button">
-            <span class="data-tool-icon export" aria-hidden="true">↗</span>
-            <span><strong>导出简报</strong><small>4K · 16:9</small></span>
-          </button>
-          <button class="data-tool-button" id="dataLedgerBtn" type="button">
-            <span class="data-tool-icon ledger" aria-hidden="true">≡</span>
-            <span><strong>钻石明细</strong><small>查看记录</small></span>
-          </button>
-        </div>
 
         <section class="stats-card" aria-labelledby="statsTitle">
           <div class="section-heading">
@@ -556,79 +552,6 @@
       </section>
     </div>
 
-    <div class="sheet-backdrop" id="yearReviewSheet" role="dialog" aria-modal="true" aria-labelledby="yearReviewTitle">
-      <section class="sheet sheet-tall year-review-sheet">
-        <div class="sheet-handle" aria-hidden="true"></div>
-        <div class="sheet-header">
-          <div>
-            <span class="section-kicker">ANNUAL REVIEW</span>
-            <h2 id="yearReviewTitle">年度回顾</h2>
-          </div>
-          <button class="sheet-close" type="button" data-close-sheet="yearReviewSheet" aria-label="关闭">×</button>
-        </div>
-
-        <div class="year-switcher">
-          <button type="button" data-year-step="-1" aria-label="查看上一年">‹</button>
-          <strong id="yearReviewYear">2026</strong>
-          <button type="button" data-year-step="1" aria-label="查看下一年">›</button>
-        </div>
-
-        <section id="yearReviewOverview">
-          <div class="year-summary-card">
-            <span>YEAR TOTAL</span>
-            <strong><span id="yearTotal">0</span><small>钻石</small></strong>
-            <p id="yearRangeLabel">2026 年度累计收获</p>
-            <div class="year-kpis">
-              <span><b id="yearActiveDays">0</b><small>活跃天数</small></span>
-              <span><b id="yearRecordCount">0</b><small>记录次数</small></span>
-              <span><b id="yearBestMonth">—</b><small>最佳月份</small></span>
-            </div>
-          </div>
-          <div class="year-source-card">
-            <div class="year-subheading">
-              <div>
-                <span class="page-eyebrow">BY SOURCE</span>
-                <h3>钻石来源构成</h3>
-              </div>
-            </div>
-            <div id="yearSourceBreakdown" class="year-source-list"></div>
-          </div>
-        </section>
-
-        <section id="yearMonthListView">
-          <div class="year-subheading">
-            <div>
-              <span class="page-eyebrow">MONTHLY VIEW</span>
-              <h3>选择月份查看折线图</h3>
-            </div>
-            <span>按本机时间统计</span>
-          </div>
-          <div class="year-month-list" id="yearMonthList"></div>
-        </section>
-
-        <section id="yearMonthDetail" class="year-month-detail" hidden>
-          <button class="year-month-back" id="yearMonthBackBtn" type="button">‹ 返回月份列表</button>
-          <div class="year-month-title-row">
-            <div>
-              <span class="page-eyebrow">MONTHLY DETAIL</span>
-              <h3 id="yearMonthTitle">1 月</h3>
-            </div>
-            <strong><span id="yearMonthTotal">0</span><small>钻石</small></strong>
-          </div>
-          <div class="year-month-kpis">
-            <span><b id="yearMonthActiveDays">0</b><small>活跃天数</small></span>
-            <span><b id="yearMonthBestDay">—</b><small>最高单日</small></span>
-            <span><b id="yearMonthCount">0</b><small>记录次数</small></span>
-          </div>
-          <div class="month-chart-wrap">
-            <canvas id="yearMonthChart" role="img" aria-label="当月每日钻石趋势"></canvas>
-            <div class="month-chart-empty" id="yearMonthChartEmpty" hidden>这个月还没有钻石记录</div>
-          </div>
-          <div id="yearMonthSourceBreakdown" class="year-source-list compact"></div>
-        </section>
-      </section>
-    </div>
-
     <div class="sheet-backdrop" id="exportReportSheet" role="dialog" aria-modal="true" aria-labelledby="exportReportTitle">
       <section class="sheet sheet-tall export-report-sheet">
         <div class="sheet-handle" aria-hidden="true"></div>
@@ -713,6 +636,6 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=26" defer></script>
+    <script src="./app.js?v=27" defer></script>
   </body>
 </html>

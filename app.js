@@ -186,26 +186,6 @@
     pointDelta: $("#pointDelta"),
     companionDays: $("#companionDays"),
     companionTotal: $("#companionTotal"),
-    yearReviewSheet: $("#yearReviewSheet"),
-    yearReviewSheetBody: $("#yearReviewSheet .sheet"),
-    yearReviewYear: $("#yearReviewYear"),
-    yearTotal: $("#yearTotal"),
-    yearRangeLabel: $("#yearRangeLabel"),
-    yearActiveDays: $("#yearActiveDays"),
-    yearRecordCount: $("#yearRecordCount"),
-    yearBestMonth: $("#yearBestMonth"),
-    yearSourceBreakdown: $("#yearSourceBreakdown"),
-    yearMonthListView: $("#yearMonthListView"),
-    yearMonthList: $("#yearMonthList"),
-    yearMonthDetail: $("#yearMonthDetail"),
-    yearMonthTitle: $("#yearMonthTitle"),
-    yearMonthTotal: $("#yearMonthTotal"),
-    yearMonthActiveDays: $("#yearMonthActiveDays"),
-    yearMonthBestDay: $("#yearMonthBestDay"),
-    yearMonthCount: $("#yearMonthCount"),
-    yearMonthChart: $("#yearMonthChart"),
-    yearMonthChartEmpty: $("#yearMonthChartEmpty"),
-    yearMonthSourceBreakdown: $("#yearMonthSourceBreakdown"),
     exportReportSheet: $("#exportReportSheet"),
     exportMonthFields: $("#exportMonthFields"),
     exportYearSelect: $("#exportYearSelect"),
@@ -245,8 +225,6 @@
     period: "day",
     selectedDayOffset: 0,
     trendRange: 7,
-    reviewYear: new Date().getFullYear(),
-    reviewMonth: null,
     exportRange: "day",
     notificationPending: new Set(),
     assistantKey: "",
@@ -1048,17 +1026,20 @@
     let end;
     let label;
     let detailLabel;
+    let reportType;
 
     if (rangeType === "week") {
       start = dateStartFor("week");
       end = nowTime + 1;
       label = "本周数据";
       detailLabel = "本周一至今天";
+      reportType = "本周简报";
     } else if (rangeType === "month") {
       start = dateStartFor("month");
       end = nowTime + 1;
       label = "本月数据";
       detailLabel = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月`;
+      reportType = "本月简报";
     } else if (rangeType === "custom-month") {
       const year = Number(elements.exportYearSelect.value) || now.getFullYear();
       const monthIndex = Math.max(0, Math.min(11, Number(elements.exportMonthSelect.value)));
@@ -1067,16 +1048,19 @@
       end = Math.min(range.end, nowTime + 1);
       label = `${year} 年 ${monthIndex + 1} 月`;
       detailLabel = `${year}.${String(monthIndex + 1).padStart(2, "0")}`;
+      reportType = "月度简报";
     } else if (rangeType === "year") {
       start = localYearRange(now.getFullYear()).start;
       end = nowTime + 1;
       label = `${now.getFullYear()} 年数据`;
       detailLabel = `今年 1 月至今`;
+      reportType = "年度简报";
     } else {
       start = localDayStart(nowTime);
       end = nowTime + 1;
       label = "今日数据";
       detailLabel = formatRangeDate(nowTime);
+      reportType = "今日简报";
     }
 
     if (end <= start) end = start + 1;
@@ -1110,6 +1094,7 @@
       end,
       label,
       detailLabel,
+      reportType,
       summary,
       points,
       bestPoint,
@@ -1214,6 +1199,69 @@
       image.onerror = reject;
       image.src = source;
     });
+  }
+
+  function drawContainedImage(context, image, x, y, width, height) {
+    if (!image?.width || !image?.height) return false;
+    const scale = Math.min(width / image.width, height / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    context.drawImage(
+      image,
+      x + (width - drawWidth) / 2,
+      y + (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight
+    );
+    return true;
+  }
+
+  function drawReportMetricIcon(context, type, x, y, size, color) {
+    context.save();
+    context.strokeStyle = color;
+    context.fillStyle = color;
+    context.lineWidth = size * 0.075;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    if (type === "calendar") {
+      roundRectPath(context, x + size * 0.12, y + size * 0.2, size * 0.76, size * 0.68, size * 0.12);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(x + size * 0.12, y + size * 0.4);
+      context.lineTo(x + size * 0.88, y + size * 0.4);
+      context.moveTo(x + size * 0.32, y + size * 0.12);
+      context.lineTo(x + size * 0.32, y + size * 0.3);
+      context.moveTo(x + size * 0.68, y + size * 0.12);
+      context.lineTo(x + size * 0.68, y + size * 0.3);
+      context.stroke();
+      context.fillRect(x + size * 0.28, y + size * 0.55, size * 0.12, size * 0.12);
+      context.fillRect(x + size * 0.52, y + size * 0.55, size * 0.12, size * 0.12);
+    } else if (type === "list") {
+      for (let row = 0; row < 3; row += 1) {
+        const cy = y + size * (0.25 + row * 0.25);
+        context.beginPath();
+        context.arc(x + size * 0.2, cy, size * 0.055, 0, Math.PI * 2);
+        context.fill();
+        context.beginPath();
+        context.moveTo(x + size * 0.38, cy);
+        context.lineTo(x + size * 0.84, cy);
+        context.stroke();
+      }
+    } else {
+      context.beginPath();
+      context.moveTo(x + size * 0.14, y + size * 0.84);
+      context.lineTo(x + size * 0.14, y + size * 0.14);
+      context.moveTo(x + size * 0.14, y + size * 0.84);
+      context.lineTo(x + size * 0.9, y + size * 0.84);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(x + size * 0.22, y + size * 0.68);
+      context.lineTo(x + size * 0.43, y + size * 0.48);
+      context.lineTo(x + size * 0.6, y + size * 0.6);
+      context.lineTo(x + size * 0.86, y + size * 0.24);
+      context.stroke();
+    }
+    context.restore();
   }
 
   function reportSourceColor(accent, index) {
@@ -1330,7 +1378,6 @@
     const onAccent =
       styles.getPropertyValue("--on-accent").trim() || "#ffffff";
     const dark = data.settings.dark;
-    const theme = THEMES.find((item) => item.id === data.settings.theme) || THEMES[0];
     const colors = {
       accent,
       accentStrong,
@@ -1343,6 +1390,28 @@
       line: dark ? "rgba(148, 201, 255, 0.16)" : "rgba(62, 124, 199, 0.14)",
       surface: dark ? "#142743" : "#ffffff",
     };
+    const assetPaths = {
+      logo: dark ? "./assets/platform-logo-white.png" : "./assets/platform-logo-blue.png",
+      chest: "./assets/chest.png",
+      diamond: "./assets/diamond.png",
+      boss: "./assets/source-boss.png",
+      seed: "./assets/source-seed.png",
+      "bonus-chest": "./assets/source-chest.png",
+      "daily-task": "./assets/task-icon.svg",
+      "character-card": "./assets/source-character-card.png",
+      "daily-gift": "./assets/source-daily-gift.png",
+    };
+    if (avatarUrl) assetPaths.avatar = avatarUrl;
+    const imageEntries = await Promise.all(
+      Object.entries(assetPaths).map(async ([key, source]) => {
+        try {
+          return [key, await loadReportImage(source)];
+        } catch (error) {
+          return [key, null];
+        }
+      })
+    );
+    const reportImages = Object.fromEntries(imageEntries);
 
     const background = context.createLinearGradient(0, 0, 3840, 2160);
     background.addColorStop(0, colors.background);
@@ -1371,63 +1440,104 @@
       dark ? "rgba(20,39,67,0.92)" : "rgba(255,255,255,0.9)",
       colors.line
     );
-    try {
-      const logo = await loadReportImage(
-        dark ? "./assets/platform-logo-white.png" : "./assets/platform-logo-blue.png"
-      );
-      const logoHeight = 94;
-      const logoWidth = Math.min(330, logo.width * (logoHeight / logo.height));
-      context.drawImage(logo, 178, 204, logoWidth, logoHeight);
-    } catch (error) {
+    if (reportImages.logo) {
+      drawContainedImage(context, reportImages.logo, 170, 174, 320, 126);
+    } else {
       context.fillStyle = colors.accent;
       context.font = reportFont(62, 900);
+      context.textAlign = "left";
       context.fillText("SG.像素2", 178, 282);
     }
 
     context.fillStyle = colors.muted;
     context.font = reportFont(24, 800);
     context.textAlign = "left";
-    context.fillText("PIXEL SURVIVAL GAME 2 · DATA BRIEF", 540, 205);
+    context.fillText("PIXEL SURVIVAL GAME 2 · DATA BRIEF", 540, 192);
     context.fillStyle = colors.text;
     context.font = reportFont(82, 900);
-    context.fillText("钻石手账", 540, 296);
-    context.fillStyle = colors.accent;
-    context.font = reportFont(31, 800);
-    context.fillText(`${model.label} · ${model.detailLabel}`, 540, 350);
-
-    context.textAlign = "right";
-    context.fillStyle = colors.muted;
-    context.font = reportFont(25, 700);
-    context.fillText(
-      `导出日期 ${formatRangeDate(Date.now())}`,
-      3650,
-      205
-    );
+    context.fillText("钻石手账", 540, 284);
     fillRoundRect(
       context,
-      3180,
-      236,
-      470,
-      92,
-      46,
-      dark ? hexToRgba(accent, 0.2) : hexToRgba(accent, 0.1),
-      hexToRgba(accent, 0.2)
+      540,
+      316,
+      196,
+      64,
+      32,
+      accent,
+      hexToRgba(onAccent, 0.18)
     );
-    context.fillStyle = colors.accent;
-    context.font = reportFont(31, 850);
+    context.fillStyle = onAccent;
+    context.font = reportFont(28, 900);
     context.textAlign = "center";
-    context.fillText(`${theme.name} · ${dark ? "深色" : "浅色"}简报`, 3415, 294);
+    context.fillText(model.reportType, 638, 359);
+    context.textAlign = "left";
+    context.fillStyle = colors.muted;
+    context.font = reportFont(27, 650);
+    context.fillText(`${model.label} · ${model.detailLabel}`, 760, 359);
+
+    fillRoundRect(
+      context,
+      3060,
+      132,
+      580,
+      226,
+      30,
+      colors.panelAlt,
+      colors.line
+    );
+    context.save();
+    context.beginPath();
+    context.arc(3122, 245, 62, 0, Math.PI * 2);
+    context.clip();
+    context.fillStyle = colors.panel;
+    context.fillRect(3060, 183, 124, 124);
+    if (reportImages.avatar) {
+      drawContainedImage(context, reportImages.avatar, 3060, 183, 124, 124);
+    } else {
+      context.fillStyle = accent;
+      context.fillRect(3060, 183, 124, 124);
+    }
+    context.restore();
+    if (!reportImages.avatar) {
+      context.beginPath();
+      context.arc(3122, 245, 62, 0, Math.PI * 2);
+      context.fillStyle = accent;
+      context.fill();
+      context.fillStyle = onAccent;
+      context.font = reportFont(46, 900);
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(
+        String(data.profile.nickname || "像").slice(0, 1),
+        3122,
+        246
+      );
+    }
+    const userName =
+      String(data.profile.nickname || DEFAULT_NICKNAME).slice(0, 10) +
+      (String(data.profile.nickname || "").length > 10 ? "…" : "");
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    context.fillStyle = colors.muted;
+    context.font = reportFont(22, 700);
+    context.fillText("钻石手账记录者", 3210, 199);
+    context.fillStyle = colors.text;
+    context.font = reportFont(44, 900);
+    context.fillText(userName, 3210, 256, 380);
+    context.fillStyle = colors.muted;
+    context.font = reportFont(21, 620);
+    context.fillText(`导出日期 ${formatRangeDate(Date.now())}`, 3210, 316);
 
     const cardY = 444;
     const cardGap = 38;
     const cardWidth = (3600 - cardGap * 3) / 4;
     const kpis = [
-      ["总收获", `${model.summary.total}`, "钻石"],
-      ["活跃天数", `${model.activeDayCount}`, "天"],
-      ["记录次数", `${model.summary.count}`, "次"],
-      ["活跃日均", `${model.average}`, "钻石"],
+      ["总收获", `${model.summary.total}`, "钻石", "diamond"],
+      ["活跃天数", `${model.activeDayCount}`, "天", "calendar"],
+      ["记录次数", `${model.summary.count}`, "次", "list"],
+      ["活跃日均", `${model.average}`, "钻石", "trend"],
     ];
-    kpis.forEach(([label, value, unit], index) => {
+    kpis.forEach(([label, value, unit, iconType], index) => {
       const x = 120 + index * (cardWidth + cardGap);
       const active = index === 0;
       const fill = active
@@ -1438,11 +1548,15 @@
               x + cardWidth,
               cardY + 300
             );
-            gradient.addColorStop(0, accent);
+            gradient.addColorStop(
+              0,
+              dark ? colorMix(accent, "#ffffff", 0.28) : colorMix(accent, "#ffffff", 0.7)
+            );
             gradient.addColorStop(1, accentStrong);
             return gradient;
           })()
         : colors.panel;
+      const activeText = dark ? "#ffffff" : colors.text;
       fillRoundRect(
         context,
         x,
@@ -1451,19 +1565,49 @@
         300,
         34,
         fill,
-        active ? hexToRgba(colors.onAccent === "#14243c" ? "#14243c" : "#ffffff", 0.18) : colors.line
+        active ? hexToRgba(dark ? "#ffffff" : colors.text, 0.14) : colors.line
       );
-      context.fillStyle = active ? colors.onAccent : colors.muted;
+      const iconX = x + 32;
+      const iconY = cardY + 43;
+      fillRoundRect(
+        context,
+        iconX,
+        iconY,
+        78,
+        78,
+        22,
+        active
+          ? hexToRgba(dark ? "#ffffff" : "#ffffff", 0.22)
+          : hexToRgba(accent, dark ? 0.18 : 0.08),
+        active ? hexToRgba(activeText, 0.14) : hexToRgba(accent, 0.12)
+      );
+      if (
+        iconType === "diamond" &&
+        reportImages.diamond &&
+        drawContainedImage(context, reportImages.diamond, iconX + 12, iconY + 12, 54, 54)
+      ) {
+        // The pixel diamond artwork already contains its own icon treatment.
+      } else {
+        drawReportMetricIcon(
+          context,
+          iconType,
+          iconX + 16,
+          iconY + 16,
+          46,
+          active ? activeText : accent
+        );
+      }
+      context.fillStyle = active ? activeText : colors.muted;
       context.font = reportFont(29, 750);
       context.textAlign = "left";
-      context.fillText(label, x + 36, cardY + 70);
-      context.fillStyle = active ? colors.onAccent : colors.text;
+      context.fillText(label, x + 128, cardY + 70);
+      context.fillStyle = active ? activeText : colors.text;
       context.font = reportFont(88, 950);
-      context.fillText(value, x + 36, cardY + 193);
+      context.fillText(value, x + 128, cardY + 193);
       const valueWidth = context.measureText(value).width;
       context.font = reportFont(29, 700);
-      context.fillStyle = active ? colors.onAccent : colors.muted;
-      context.fillText(unit, x + 45 + valueWidth, cardY + 190);
+      context.fillStyle = active ? activeText : colors.muted;
+      context.fillText(unit, x + 137 + valueWidth, cardY + 190);
     });
 
     fillRoundRect(context, 120, 802, 2460, 1110, 38, colors.panel, colors.line);
@@ -1471,9 +1615,20 @@
     context.font = reportFont(25, 800);
     context.textAlign = "left";
     context.fillText("PERFORMANCE OVERVIEW", 176, 888);
+    fillRoundRect(
+      context,
+      176,
+      902,
+      58,
+      58,
+      17,
+      hexToRgba(accent, dark ? 0.2 : 0.09),
+      hexToRgba(accent, 0.14)
+    );
+    drawReportMetricIcon(context, "trend", 191, 917, 28, accent);
     context.fillStyle = colors.text;
     context.font = reportFont(48, 900);
-    context.fillText("钻石收益趋势", 176, 950);
+    context.fillText("钻石收益趋势", 254, 950);
     context.textAlign = "right";
     context.fillStyle = colors.accent;
     context.font = reportFont(44, 900);
@@ -1501,9 +1656,22 @@
     context.font = reportFont(25, 800);
     context.textAlign = "left";
     context.fillText("DIAMOND SOURCES", 2702, 888);
+    fillRoundRect(
+      context,
+      2702,
+      902,
+      58,
+      58,
+      17,
+      hexToRgba(accent, dark ? 0.2 : 0.09),
+      hexToRgba(accent, 0.14)
+    );
+    if (reportImages.diamond) {
+      drawContainedImage(context, reportImages.diamond, 2714, 914, 34, 34);
+    }
     context.fillStyle = colors.text;
     context.font = reportFont(45, 900);
-    context.fillText("来源构成", 2702, 950);
+    context.fillText("来源构成", 2780, 950);
     const reportSources =
       model.sources.length
         ? model.sources.slice(0, 8)
@@ -1515,14 +1683,28 @@
         ? Math.round((source.total / model.summary.total) * 100)
         : 0;
       const color = reportSourceColor(accent, index);
-      context.fillStyle = color;
-      context.beginPath();
-      context.arc(2722, y, 10, 0, Math.PI * 2);
-      context.fill();
+      fillRoundRect(
+        context,
+        2702,
+        y - 24,
+        48,
+        48,
+        14,
+        hexToRgba(color, dark ? 0.2 : 0.09),
+        hexToRgba(color, 0.16)
+      );
+      drawContainedImage(
+        context,
+        reportImages[source.key],
+        2710,
+        y - 16,
+        32,
+        32
+      );
       context.fillStyle = colors.text;
       context.font = reportFont(30, 760);
       context.textAlign = "left";
-      context.fillText(source.name, 2752, y + 9);
+      context.fillText(source.name, 2770, y + 9);
       context.textAlign = "right";
       context.fillStyle = colors.text;
       context.font = reportFont(34, 900);
@@ -1532,27 +1714,42 @@
       context.fillText(`${percentage}%`, 3668, y + 50);
       fillRoundRect(
         context,
-        2752,
+        2770,
         y + 30,
-        804,
+        786,
         12,
         6,
         colors.panelAlt
       );
       if (percentage > 0) {
+        const barWidth = Math.max(18, (786 * percentage) / 100);
+        const barGradient = context.createLinearGradient(
+          2770,
+          y + 30,
+          2770 + barWidth,
+          y + 42
+        );
+        barGradient.addColorStop(
+          0,
+          colorMix(color, "#ffffff", dark ? 0.3 : 0.65)
+        );
+        barGradient.addColorStop(1, color);
         fillRoundRect(
           context,
-          2752,
+          2770,
           y + 30,
-          Math.max(18, (804 * percentage) / 100),
+          barWidth,
           12,
           6,
-          color
+          barGradient
         );
       }
     });
 
     fillRoundRect(context, 120, 1948, 3600, 126, 30, colors.panelAlt, colors.line);
+    if (reportImages.diamond) {
+      drawContainedImage(context, reportImages.diamond, 176, 1985, 48, 48);
+    }
     context.fillStyle = colors.text;
     context.font = reportFont(30, 850);
     context.textAlign = "left";
@@ -1560,20 +1757,16 @@
       `最高${model.rangeType === "day" ? "时段" : model.rangeType === "year" ? "月份" : "单日"}  ${
         model.bestPoint?.total ? `${model.bestPoint.label} · ${model.bestPoint.total} 钻石` : "暂无记录"
       }`,
-      176,
+      240,
       2023
     );
     context.fillStyle = colors.muted;
     context.font = reportFont(23, 650);
     context.fillText(
       "像素生存者2 · 钻石手账  |  数据仅来自本机记录  |  local-first data journal",
-      176,
+      240,
       2057
     );
-    context.textAlign = "right";
-    context.fillStyle = colors.accent;
-    context.font = reportFont(28, 850);
-    context.fillText(`${theme.name}主题`, 3638, 2023);
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(
@@ -2689,7 +2882,6 @@
     renderStats();
     renderDailyTrend();
     renderCompanionStrip();
-    if (elements.yearReviewSheet.classList.contains("open")) renderYearReview();
   }
 
   function renderLedger() {
@@ -3548,21 +3740,6 @@
         renderAnalytics();
         return;
       }
-      const yearStep = event.target.closest("[data-year-step]");
-      if (yearStep) {
-        const bounds = reviewYearBounds();
-        const nextYear = runtime.reviewYear + Number(yearStep.dataset.yearStep);
-        if (nextYear < bounds.min || nextYear > bounds.max) return;
-        runtime.reviewYear = nextYear;
-        runtime.reviewMonth = null;
-        renderYearReview();
-        return;
-      }
-      const reviewMonthButton = event.target.closest("[data-review-month]");
-      if (reviewMonthButton) {
-        selectReviewMonth(Number(reviewMonthButton.dataset.reviewMonth));
-        return;
-      }
       const exportRangeButton = event.target.closest("[data-export-range]");
       if (exportRangeButton) {
         setExportRange(exportRangeButton.dataset.exportRange);
@@ -3627,9 +3804,7 @@
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#ledgerBtn").addEventListener("click", openLedger);
     $("#dataLedgerBtn").addEventListener("click", openLedger);
-    $("#yearReviewBtn").addEventListener("click", openYearReview);
     $("#exportReportBtn").addEventListener("click", openExportReport);
-    $("#yearMonthBackBtn").addEventListener("click", closeYearMonthDetail);
     $("#generateReportBtn").addEventListener("click", exportReport);
     elements.exportYearSelect.addEventListener("change", renderExportPreview);
     elements.exportMonthSelect.addEventListener("change", renderExportPreview);
@@ -3746,7 +3921,6 @@
       elements.settingsSheet,
       elements.qqGroupSheet,
       elements.ledgerSheet,
-      elements.yearReviewSheet,
       elements.exportReportSheet,
     ].forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
@@ -3775,16 +3949,6 @@
     window.addEventListener("resize", () => {
       const dataPage = document.querySelector('[data-page-view="data"]');
       if (dataPage && !dataPage.hidden) renderDailyTrend();
-      if (
-        elements.yearMonthDetail &&
-        !elements.yearMonthDetail.hidden &&
-        elements.yearReviewSheet.classList.contains("open")
-      ) {
-        const monthRange = localMonthRange(runtime.reviewYear, runtime.reviewMonth);
-        drawMonthChart(
-          dailySeries(monthRange.start, Math.min(monthRange.end, Date.now() + 1))
-        );
-      }
     });
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -3805,7 +3969,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=26", { updateViaCache: "none" })
+        .register("./sw.js?v=27", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
