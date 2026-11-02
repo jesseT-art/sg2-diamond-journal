@@ -1441,7 +1441,7 @@
       colors.line
     );
     if (reportImages.logo) {
-      drawContainedImage(context, reportImages.logo, 170, 174, 320, 126);
+      drawContainedImage(context, reportImages.logo, 152, 148, 430, 170);
     } else {
       context.fillStyle = colors.accent;
       context.font = reportFont(62, 900);
@@ -1452,13 +1452,13 @@
     context.fillStyle = colors.muted;
     context.font = reportFont(24, 800);
     context.textAlign = "left";
-    context.fillText("PIXEL SURVIVAL GAME 2 · DATA BRIEF", 540, 192);
+    context.fillText("PIXEL SURVIVAL GAME 2 · DATA BRIEF", 650, 192);
     context.fillStyle = colors.text;
     context.font = reportFont(82, 900);
-    context.fillText("钻石手账", 540, 284);
+    context.fillText("钻石手账", 650, 284);
     fillRoundRect(
       context,
-      540,
+      650,
       316,
       196,
       64,
@@ -1469,17 +1469,17 @@
     context.fillStyle = onAccent;
     context.font = reportFont(28, 900);
     context.textAlign = "center";
-    context.fillText(model.reportType, 638, 359);
+    context.fillText(model.reportType, 748, 359);
     context.textAlign = "left";
     context.fillStyle = colors.muted;
     context.font = reportFont(27, 650);
-    context.fillText(`${model.label} · ${model.detailLabel}`, 760, 359);
+    context.fillText(`${model.label} · ${model.detailLabel}`, 870, 359);
 
     fillRoundRect(
       context,
-      3060,
+      3020,
       132,
-      580,
+      620,
       226,
       30,
       colors.panelAlt,
@@ -1487,20 +1487,25 @@
     );
     context.save();
     context.beginPath();
-    context.arc(3122, 245, 62, 0, Math.PI * 2);
+    context.arc(3110, 245, 64, 0, Math.PI * 2);
     context.clip();
     context.fillStyle = colors.panel;
-    context.fillRect(3060, 183, 124, 124);
+    context.fillRect(3046, 181, 128, 128);
     if (reportImages.avatar) {
-      drawContainedImage(context, reportImages.avatar, 3060, 183, 124, 124);
+      drawContainedImage(context, reportImages.avatar, 3046, 181, 128, 128);
     } else {
       context.fillStyle = accent;
-      context.fillRect(3060, 183, 124, 124);
+      context.fillRect(3046, 181, 128, 128);
     }
     context.restore();
+    context.beginPath();
+    context.arc(3110, 245, 65, 0, Math.PI * 2);
+    context.strokeStyle = hexToRgba(accent, 0.36);
+    context.lineWidth = 5;
+    context.stroke();
     if (!reportImages.avatar) {
       context.beginPath();
-      context.arc(3122, 245, 62, 0, Math.PI * 2);
+      context.arc(3110, 245, 64, 0, Math.PI * 2);
       context.fillStyle = accent;
       context.fill();
       context.fillStyle = onAccent;
@@ -1509,7 +1514,7 @@
       context.textBaseline = "middle";
       context.fillText(
         String(data.profile.nickname || "像").slice(0, 1),
-        3122,
+        3110,
         246
       );
     }
@@ -1517,16 +1522,17 @@
       String(data.profile.nickname || DEFAULT_NICKNAME).slice(0, 10) +
       (String(data.profile.nickname || "").length > 10 ? "…" : "");
     context.textAlign = "left";
-    context.textBaseline = "alphabetic";
+    context.textBaseline = "middle";
     context.fillStyle = colors.muted;
     context.font = reportFont(22, 700);
-    context.fillText("钻石手账记录者", 3210, 199);
+    context.fillText("钻石手账记录者", 3212, 198);
     context.fillStyle = colors.text;
     context.font = reportFont(44, 900);
-    context.fillText(userName, 3210, 256, 380);
+    context.fillText(userName, 3212, 253, 376);
     context.fillStyle = colors.muted;
     context.font = reportFont(21, 620);
-    context.fillText(`导出日期 ${formatRangeDate(Date.now())}`, 3210, 316);
+    context.fillText(`导出日期 ${formatRangeDate(Date.now())}`, 3212, 310);
+    context.textBaseline = "alphabetic";
 
     const cardY = 444;
     const cardGap = 38;
@@ -1548,15 +1554,15 @@
               x + cardWidth,
               cardY + 300
             );
+            gradient.addColorStop(0, accentStrong);
             gradient.addColorStop(
-              0,
-              dark ? colorMix(accent, "#ffffff", 0.28) : colorMix(accent, "#ffffff", 0.7)
+              1,
+              colorMix(accent, "#ffffff", dark ? 0.2 : 0.72)
             );
-            gradient.addColorStop(1, accentStrong);
             return gradient;
           })()
         : colors.panel;
-      const activeText = dark ? "#ffffff" : colors.text;
+      const activeText = onAccent;
       fillRoundRect(
         context,
         x,
@@ -1568,14 +1574,14 @@
         active ? hexToRgba(dark ? "#ffffff" : colors.text, 0.14) : colors.line
       );
       const iconX = x + 32;
-      const iconY = cardY + 43;
+      const iconY = cardY + 38;
       fillRoundRect(
         context,
         iconX,
         iconY,
-        78,
-        78,
-        22,
+        118,
+        118,
+        30,
         active
           ? hexToRgba(dark ? "#ffffff" : "#ffffff", 0.22)
           : hexToRgba(accent, dark ? 0.18 : 0.08),
@@ -1584,7 +1590,7 @@
       if (
         iconType === "diamond" &&
         reportImages.diamond &&
-        drawContainedImage(context, reportImages.diamond, iconX + 12, iconY + 12, 54, 54)
+        drawContainedImage(context, reportImages.diamond, iconX + 11, iconY + 11, 96, 96)
       ) {
         // The pixel diamond artwork already contains its own icon treatment.
       } else {
@@ -1593,21 +1599,21 @@
           iconType,
           iconX + 16,
           iconY + 16,
-          46,
+          86,
           active ? activeText : accent
         );
       }
       context.fillStyle = active ? activeText : colors.muted;
       context.font = reportFont(29, 750);
       context.textAlign = "left";
-      context.fillText(label, x + 128, cardY + 70);
+      context.fillText(label, x + 174, cardY + 70);
       context.fillStyle = active ? activeText : colors.text;
       context.font = reportFont(88, 950);
-      context.fillText(value, x + 128, cardY + 193);
+      context.fillText(value, x + 174, cardY + 193);
       const valueWidth = context.measureText(value).width;
       context.font = reportFont(29, 700);
       context.fillStyle = active ? activeText : colors.muted;
-      context.fillText(unit, x + 137 + valueWidth, cardY + 190);
+      context.fillText(unit, x + 183 + valueWidth, cardY + 190);
     });
 
     fillRoundRect(context, 120, 802, 2460, 1110, 38, colors.panel, colors.line);
@@ -1685,26 +1691,26 @@
       const color = reportSourceColor(accent, index);
       fillRoundRect(
         context,
-        2702,
-        y - 24,
-        48,
-        48,
-        14,
+        2700,
+        y - 31,
+        64,
+        64,
+        18,
         hexToRgba(color, dark ? 0.2 : 0.09),
         hexToRgba(color, 0.16)
       );
       drawContainedImage(
         context,
         reportImages[source.key],
-        2710,
-        y - 16,
-        32,
-        32
+        2704,
+        y - 27,
+        56,
+        56
       );
       context.fillStyle = colors.text;
       context.font = reportFont(30, 760);
       context.textAlign = "left";
-      context.fillText(source.name, 2770, y + 9);
+      context.fillText(source.name, 2782, y + 9);
       context.textAlign = "right";
       context.fillStyle = colors.text;
       context.font = reportFont(34, 900);
@@ -1714,29 +1720,29 @@
       context.fillText(`${percentage}%`, 3668, y + 50);
       fillRoundRect(
         context,
-        2770,
+        2782,
         y + 30,
-        786,
+        680,
         12,
         6,
         colors.panelAlt
       );
       if (percentage > 0) {
-        const barWidth = Math.max(18, (786 * percentage) / 100);
+        const barWidth = Math.max(18, (680 * percentage) / 100);
         const barGradient = context.createLinearGradient(
-          2770,
+          2782,
           y + 30,
-          2770 + barWidth,
+          2782 + barWidth,
           y + 42
         );
+        barGradient.addColorStop(0, color);
         barGradient.addColorStop(
-          0,
-          colorMix(color, "#ffffff", dark ? 0.3 : 0.65)
+          1,
+          colorMix(color, "#ffffff", dark ? 0.32 : 0.7)
         );
-        barGradient.addColorStop(1, color);
         fillRoundRect(
           context,
-          2770,
+          2782,
           y + 30,
           barWidth,
           12,
@@ -3803,8 +3809,16 @@
     $("#avatarPickBtn").addEventListener("click", () => elements.avatarInput.click());
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#ledgerBtn").addEventListener("click", openLedger);
-    $("#dataLedgerBtn").addEventListener("click", openLedger);
-    $("#exportReportBtn").addEventListener("click", openExportReport);
+    $("#dataLedgerBtn").addEventListener("click", (event) => {
+      triggerButtonPress(event.currentTarget);
+      triggerHapticFeedback("single");
+      openLedger();
+    });
+    $("#exportReportBtn").addEventListener("click", (event) => {
+      triggerButtonPress(event.currentTarget);
+      triggerHapticFeedback("single");
+      openExportReport();
+    });
     $("#generateReportBtn").addEventListener("click", exportReport);
     elements.exportYearSelect.addEventListener("change", renderExportPreview);
     elements.exportMonthSelect.addEventListener("change", renderExportPreview);
@@ -3969,7 +3983,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=27", { updateViaCache: "none" })
+        .register("./sw.js?v=28", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();

@@ -16,10 +16,10 @@
     <meta name="apple-mobile-web-app-title" content="钻石手账" />
     <meta name="format-detection" content="telephone=no" />
     <title>像素生存者2 钻石手账</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=27" />
+    <link rel="manifest" href="./manifest.webmanifest?v=28" />
     <link rel="icon" type="image/png" href="./assets/favicon-32.png" />
     <link rel="apple-touch-icon" href="./assets/app-icon-180.png" />
-    <link rel="stylesheet" href="./styles.css?v=27" />
+    <link rel="stylesheet" href="./styles.css?v=28" />
   </head>
   <body>
     <div class="ambient ambient-one" aria-hidden="true"></div>
@@ -206,12 +206,21 @@
             </div>
             <div class="page-action-group">
               <button class="page-action-button" id="exportReportBtn" type="button">
-                导出简报
-                <span aria-hidden="true">↗</span>
+                <span class="page-action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20">
+                    <path d="M10 13V3M6.5 6.5 10 3l3.5 3.5M4 11v4h12v-4" />
+                  </svg>
+                </span>
+                <strong>导出简报</strong>
               </button>
               <button class="page-action-button" id="dataLedgerBtn" type="button">
-                钻石明细
-                <span aria-hidden="true">›</span>
+                <span class="page-action-icon" aria-hidden="true">
+                  <svg viewBox="0 0 20 20">
+                    <path d="M5 5h10M5 10h10M5 15h7" />
+                    <path d="M2.5 5h.1M2.5 10h.1M2.5 15h.1" />
+                  </svg>
+                </span>
+                <strong>钻石明细</strong>
               </button>
             </div>
           </div>
@@ -636,6 +645,6 @@
     </div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <noscript>请启用 JavaScript 后使用钻石手账。</noscript>
-    <script src="./app.js?v=27" defer></script>
+    <script src="./app.js?v=28" defer></script>
   </body>
 </html>
