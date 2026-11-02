@@ -1849,7 +1849,11 @@
 
   async function saveReportImage(blob, fileName) {
     const nativeBridge = window.SG2Native;
-    if (nativeBridge && typeof nativeBridge.saveImageToGallery === "function") {
+    if (nativeBridge && typeof nativeBridge.saveImageToGallery !== "function") {
+      showToast("当前 APK 原生保存组件过旧，请安装 V1.2.1 修复包");
+      return "stale-apk";
+    }
+    if (nativeBridge) {
       try {
         const dataUrl = await blobToDataUrl(blob);
         const result = nativeBridge.saveImageToGallery(dataUrl, fileName);
@@ -1861,9 +1865,12 @@
           showToast("请允许照片和存储权限，然后再次导出");
           return "permission";
         }
-        console.warn("原生相册保存失败，改用文件下载。", result);
+        showToast("相册保存失败，请确认已安装 V1.2.1 并检查存储空间");
+        return "native-error";
       } catch (error) {
-        console.warn("原生相册保存异常，改用文件下载。", error);
+        console.error("原生相册保存异常。", error);
+        showToast("相册保存失败，请重新安装 V1.2.1 修复包");
+        return "native-error";
       }
     }
     if (isIOSDevice() && navigator.share) {
@@ -4060,7 +4067,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=38", { updateViaCache: "none" })
+        .register("./sw.js?v=39", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
