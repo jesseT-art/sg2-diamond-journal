@@ -4,7 +4,7 @@
   const STORAGE_KEY = "sg2-diamond-journal-v1";
   const DB_NAME = "sg2-diamond-journal";
   const DB_VERSION = 1;
-  const DATA_VERSION = 2;
+  const DATA_VERSION = 3;
   const UNDO_MS = 5000;
   const DEFAULT_NICKNAME = "像素冒险者";
   const QQ_GROUP_UIN = "1124909778";
@@ -184,6 +184,39 @@
     pointDiamond: $("#pointDiamond"),
     pointExtra: $("#pointExtra"),
     pointDelta: $("#pointDelta"),
+    companionDays: $("#companionDays"),
+    companionTotal: $("#companionTotal"),
+    yearReviewSheet: $("#yearReviewSheet"),
+    yearReviewSheetBody: $("#yearReviewSheet .sheet"),
+    yearReviewYear: $("#yearReviewYear"),
+    yearTotal: $("#yearTotal"),
+    yearRangeLabel: $("#yearRangeLabel"),
+    yearActiveDays: $("#yearActiveDays"),
+    yearRecordCount: $("#yearRecordCount"),
+    yearBestMonth: $("#yearBestMonth"),
+    yearSourceBreakdown: $("#yearSourceBreakdown"),
+    yearMonthListView: $("#yearMonthListView"),
+    yearMonthList: $("#yearMonthList"),
+    yearMonthDetail: $("#yearMonthDetail"),
+    yearMonthTitle: $("#yearMonthTitle"),
+    yearMonthTotal: $("#yearMonthTotal"),
+    yearMonthActiveDays: $("#yearMonthActiveDays"),
+    yearMonthBestDay: $("#yearMonthBestDay"),
+    yearMonthCount: $("#yearMonthCount"),
+    yearMonthChart: $("#yearMonthChart"),
+    yearMonthChartEmpty: $("#yearMonthChartEmpty"),
+    yearMonthSourceBreakdown: $("#yearMonthSourceBreakdown"),
+    exportReportSheet: $("#exportReportSheet"),
+    exportMonthFields: $("#exportMonthFields"),
+    exportYearSelect: $("#exportYearSelect"),
+    exportMonthSelect: $("#exportMonthSelect"),
+    exportRangeLabel: $("#exportRangeLabel"),
+    exportRangeDates: $("#exportRangeDates"),
+    exportPreviewTotal: $("#exportPreviewTotal"),
+    exportMockTotal: $("#exportMockTotal"),
+    exportMockDays: $("#exportMockDays"),
+    exportMockRecords: $("#exportMockRecords"),
+    generateReportBtn: $("#generateReportBtn"),
   };
 
   let dbPromise = null;
@@ -212,6 +245,9 @@
     period: "day",
     selectedDayOffset: 0,
     trendRange: 7,
+    reviewYear: new Date().getFullYear(),
+    reviewMonth: null,
+    exportRange: "day",
     notificationPending: new Set(),
     assistantKey: "",
   };
@@ -219,7 +255,7 @@
   function defaultData() {
     return {
       version: DATA_VERSION,
-      profile: { nickname: DEFAULT_NICKNAME },
+      profile: { nickname: DEFAULT_NICKNAME, startedAt: null },
       settings: {
         theme: "blue",
         dark: false,
@@ -258,6 +294,8 @@
 
     result.profile.nickname =
       String(result.profile.nickname || "").trim().slice(0, 16) || DEFAULT_NICKNAME;
+    const startedAt = Number(result.profile.startedAt);
+    result.profile.startedAt = Number.isFinite(startedAt) && startedAt > 0 ? startedAt : null;
     if (!THEMES.some((theme) => theme.id === result.settings.theme)) {
       result.settings.theme = "blue";
     }
@@ -293,6 +331,9 @@
       if (Number(result.settings.durations.diamond) === 30) {
         result.settings.durations.diamond = 45;
       }
+      result.version = DATA_VERSION;
+    }
+    if (sourceVersion < DATA_VERSION) {
       result.version = DATA_VERSION;
     }
     for (const extraSource of EXTRA_SOURCES) {
@@ -510,6 +551,173 @@
     return event?.type === "source" ? EXTRA_SOURCE_BY_ID.get(event.sourceId) || null : null;
   }
 
+  const SOURCE_CATEGORY_META = [
+    { key: "chest", name: "宝箱奖励", colorIndex: 0 },
+    { key: "diamond", name: "钻石奖励", colorIndex: 1 },
+    { key: "daily-task", name: "每日任务", colorIndex: 2 },
+    { key: "boss", name: "BOSS", colorIndex: 3 },
+    { key: "seed", name: "种子", colorIndex: 4 },
+    { key: "bonus-chest", name: "额外宝箱", colorIndex: 5 },
+    { key: "character-card", name: "角色卡合成", colorIndex: 6 },
+    { key: "daily-gift", name: "天天送礼物", colorIndex: 7 },
+    { key: "other", name: "其他来源", colorIndex: 8 },
+  ];
+  const SOURCE_CATEGORY_BY_KEY = new Map(
+    SOURCE_CATEGORY_META.map((category) => [category.key, category])
+  );
+
+  function eventCategory(event) {
+    let key = "other";
+    if (event?.type === "chest") key = "chest";
+    else if (event?.type === "diamond") key = "diamond";
+    else if (event?.type === "source") key = String(event.sourceId || "other");
+    if (!SOURCE_CATEGORY_BY_KEY.has(key)) key = "other";
+    return SOURCE_CATEGORY_BY_KEY.get(key);
+  }
+
+  function localDayNumber(timestamp) {
+    const date = new Date(timestamp);
+    return Math.floor(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000
+    );
+  }
+
+  function localDayStart(timestamp = Date.now()) {
+    const date = new Date(timestamp);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  function localMonthRange(year, monthIndex) {
+    return {
+      start: new Date(year, monthIndex, 1).getTime(),
+      end: new Date(year, monthIndex + 1, 1).getTime(),
+    };
+  }
+
+  function localYearRange(year) {
+    return {
+      start: new Date(year, 0, 1).getTime(),
+      end: new Date(year + 1, 0, 1).getTime(),
+    };
+  }
+
+  function summarizeEventRange(sourceEvents, start, end) {
+    const rangeEvents = eventsInRange(sourceEvents, { start, end });
+    const activeDays = new Set();
+    const byDay = new Map();
+    const bySource = new Map(
+      SOURCE_CATEGORY_META.map((category) => [
+        category.key,
+        { ...category, total: 0, count: 0 },
+      ])
+    );
+
+    for (const event of rangeEvents) {
+      const reward = eventReward(event);
+      const day = localDayNumber(event.claimedAt);
+      const category = eventCategory(event);
+      const categoryRow = bySource.get(category.key);
+      categoryRow.total += reward;
+      categoryRow.count += 1;
+      activeDays.add(day);
+      const dayRow = byDay.get(day) || { day, total: 0, count: 0 };
+      dayRow.total += reward;
+      dayRow.count += 1;
+      byDay.set(day, dayRow);
+    }
+
+    const days = [...byDay.values()].sort((a, b) => a.day - b.day);
+    const total = rangeEvents.reduce((sum, event) => sum + eventReward(event), 0);
+    return {
+      events: rangeEvents,
+      total,
+      count: rangeEvents.length,
+      activeDays: activeDays.size,
+      bestDay: days.reduce(
+        (best, day) => (!best || day.total > best.total ? day : best),
+        null
+      ),
+      bySource: [...bySource.values()],
+    };
+  }
+
+  function dailySeries(start, end, includeEmpty = true) {
+    const first = new Date(start);
+    first.setHours(0, 0, 0, 0);
+    const last = new Date(end - 1);
+    last.setHours(0, 0, 0, 0);
+    const points = [];
+    for (
+      let cursor = first.getTime();
+      cursor <= last.getTime();
+      cursor = new Date(
+        new Date(cursor).getFullYear(),
+        new Date(cursor).getMonth(),
+        new Date(cursor).getDate() + 1
+      ).getTime()
+    ) {
+      const next = new Date(
+        new Date(cursor).getFullYear(),
+        new Date(cursor).getMonth(),
+        new Date(cursor).getDate() + 1
+      ).getTime();
+      const summary = summarizeEventRange(events, cursor, next);
+      if (includeEmpty || summary.count) {
+        points.push({
+          start: cursor,
+          label: `${new Date(cursor).getMonth() + 1}/${new Date(cursor).getDate()}`,
+          total: summary.total,
+          count: summary.count,
+        });
+      }
+    }
+    return points;
+  }
+
+  function hourlySeries(start, end) {
+    const firstHour = localDayStart(start);
+    return Array.from({ length: 24 }, (_, hour) => {
+      const hourStart = new Date(firstHour);
+      hourStart.setHours(hour, 0, 0, 0);
+      const hourEnd = new Date(firstHour);
+      hourEnd.setHours(hour + 1, 0, 0, 0);
+      const summary = summarizeEventRange(
+        events,
+        Math.max(start, hourStart.getTime()),
+        Math.min(end, hourEnd.getTime())
+      );
+      return {
+        start: hourStart.getTime(),
+        label: `${String(hour).padStart(2, "0")}:00`,
+        total: summary.total,
+        count: summary.count,
+      };
+    });
+  }
+
+  function monthlySeries(year) {
+    return Array.from({ length: 12 }, (_, monthIndex) => {
+      const range = localMonthRange(year, monthIndex);
+      const summary = summarizeEventRange(events, range.start, Math.min(range.end, Date.now() + 1));
+      return {
+        start: range.start,
+        label: `${monthIndex + 1}月`,
+        total: summary.total,
+        count: summary.count,
+        activeDays: summary.activeDays,
+      };
+    });
+  }
+
+  function formatRangeDate(timestamp) {
+    return new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(new Date(timestamp));
+  }
+
   function extraSourceIconMarkup(source) {
     if (source.icon) {
       return `<img src="${source.icon}" alt="" />`;
@@ -600,6 +808,823 @@
         : delta < 0
           ? `较前一天 ${delta}`
           : "与前一天持平";
+  }
+
+  function renderCompanionStrip() {
+    const startedAt =
+      Number(data.profile.startedAt) || Number(events[0]?.claimedAt) || Date.now();
+    const days = Math.max(
+      1,
+      localDayNumber(Date.now()) - localDayNumber(startedAt) + 1
+    );
+    const total = events.reduce((sum, event) => sum + eventReward(event), 0);
+    elements.companionDays.textContent = String(days);
+    elements.companionTotal.textContent = String(total);
+  }
+
+  function sourceBreakdownMarkup(summary, { compact = false } = {}) {
+    const denominator = Math.max(1, summary.total);
+    const rows = summary.bySource.filter(
+      (source) => source.count > 0 || ["chest", "diamond", "daily-task"].includes(source.key)
+    );
+    return rows
+      .sort((a, b) => b.total - a.total)
+      .map((source) => {
+        const percentage = summary.total ? Math.round((source.total / denominator) * 100) : 0;
+        return `
+          <div class="year-source-row${compact ? " compact" : ""}">
+            <span class="year-source-dot" style="--source-color:color-mix(in srgb, var(--accent) ${Math.max(24, 86 - source.colorIndex * 8)}%, #74a7ff)"></span>
+            <span class="year-source-name">${source.name}</span>
+            <strong>${source.total}<small>颗</small></strong>
+            <span class="year-source-percent">${percentage}%</span>
+            <i style="--source-width:${percentage}%"></i>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function reviewYearBounds() {
+    const currentYear = new Date().getFullYear();
+    const earliest = events.length
+      ? new Date(Number(events[0].claimedAt)).getFullYear()
+      : currentYear;
+    return { min: Math.min(earliest, currentYear), max: currentYear };
+  }
+
+  function renderYearReview() {
+    const year = runtime.reviewYear;
+    const range = localYearRange(year);
+    const summary = summarizeEventRange(events, range.start, Math.min(range.end, Date.now() + 1));
+    const months = monthlySeries(year);
+    const bounds = reviewYearBounds();
+    const bestMonth = months.reduce(
+      (best, month) => (!best || month.total > best.total ? month : best),
+      null
+    );
+
+    elements.yearReviewYear.textContent = String(year);
+    elements.yearTotal.textContent = String(summary.total);
+    elements.yearRangeLabel.textContent = `${year} 年度累计收获`;
+    elements.yearActiveDays.textContent = String(summary.activeDays);
+    elements.yearRecordCount.textContent = String(summary.count);
+    elements.yearBestMonth.textContent =
+      bestMonth?.total > 0 ? bestMonth.label : "—";
+    elements.yearSourceBreakdown.innerHTML = sourceBreakdownMarkup(summary);
+
+    $$("[data-year-step]").forEach((button) => {
+      const nextYear = year + Number(button.dataset.yearStep);
+      button.disabled = nextYear < bounds.min || nextYear > bounds.max;
+    });
+
+    const maxMonth = Math.max(1, ...months.map((month) => month.total));
+    elements.yearMonthList.innerHTML = months
+      .map((month, index) => {
+        const future = month.start > Date.now();
+        const width = Math.round((month.total / maxMonth) * 100);
+        return `
+          <button class="year-month-row" type="button" data-review-month="${index}" ${future ? "disabled" : ""}>
+            <span class="year-month-index">${String(index + 1).padStart(2, "0")}</span>
+            <span class="year-month-copy">
+              <strong>${month.label}</strong>
+              <small>${month.count ? `${month.count} 次记录 · ${month.activeDays} 天活跃` : "暂无记录"}</small>
+              <i style="--month-width:${width}%"></i>
+            </span>
+            <span class="year-month-value">${month.total}<small>钻石</small></span>
+            <span class="year-month-arrow">›</span>
+          </button>
+        `;
+      })
+      .join("");
+
+    const showingMonth = runtime.reviewMonth !== null;
+    elements.yearMonthListView.hidden = showingMonth;
+    elements.yearMonthDetail.hidden = !showingMonth;
+    if (showingMonth) renderYearMonthDetail();
+  }
+
+  function renderYearMonthDetail() {
+    const monthIndex = runtime.reviewMonth;
+    if (!Number.isInteger(monthIndex) || monthIndex < 0 || monthIndex > 11) return;
+    const range = localMonthRange(runtime.reviewYear, monthIndex);
+    const summary = summarizeEventRange(events, range.start, Math.min(range.end, Date.now() + 1));
+    const days = dailySeries(range.start, Math.min(range.end, Date.now() + 1));
+    const bestDay = summary.bestDay
+      ? new Date(summary.bestDay.day * 86400000).getUTCDate()
+      : null;
+
+    elements.yearMonthTitle.textContent = `${runtime.reviewYear} 年 ${monthIndex + 1} 月`;
+    elements.yearMonthTotal.textContent = String(summary.total);
+    elements.yearMonthActiveDays.textContent = String(summary.activeDays);
+    elements.yearMonthBestDay.textContent = bestDay ? `${bestDay}日` : "—";
+    elements.yearMonthCount.textContent = String(summary.count);
+    elements.yearMonthSourceBreakdown.innerHTML = sourceBreakdownMarkup(summary, {
+      compact: true,
+    });
+    elements.yearMonthChartEmpty.hidden = summary.count > 0;
+    elements.yearMonthChart.hidden = summary.count === 0;
+    if (summary.count > 0) {
+      window.requestAnimationFrame(() => drawMonthChart(days));
+    }
+  }
+
+  function drawMonthChart(days) {
+    const canvas = elements.yearMonthChart;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = rect.width;
+    const height = rect.height;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    const context = canvas.getContext("2d");
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    const styles = getComputedStyle(document.documentElement);
+    const accent = styles.getPropertyValue("--accent").trim() || "#2f7dff";
+    const muted = styles.getPropertyValue("--muted").trim() || "#71839b";
+    const line = styles.getPropertyValue("--line").trim() || "rgba(62,124,199,.14)";
+    const surface = styles.getPropertyValue("--surface-solid").trim() || "#ffffff";
+    const maxValue = Math.max(4, ...days.map((day) => day.total));
+    const ceiling = Math.ceil(maxValue / 4) * 4;
+    const plot = { left: 27, right: width - 7, top: 12, bottom: height - 24 };
+    const plotWidth = plot.right - plot.left;
+    const plotHeight = plot.bottom - plot.top;
+    const xFor = (index) =>
+      plot.left + (plotWidth * index) / Math.max(1, days.length - 1);
+    const yFor = (value) => plot.bottom - (plotHeight * value) / ceiling;
+
+    context.font = '8px -apple-system, BlinkMacSystemFont, "Microsoft YaHei", sans-serif';
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    context.fillStyle = muted;
+    context.strokeStyle = line;
+    context.lineWidth = 1;
+    for (let step = 0; step <= 4; step += 1) {
+      const value = (ceiling / 4) * step;
+      const y = yFor(value);
+      context.beginPath();
+      context.setLineDash([3, 5]);
+      context.moveTo(plot.left, y);
+      context.lineTo(plot.right, y);
+      context.stroke();
+      context.fillText(String(Math.round(value)), plot.left - 6, y);
+    }
+    context.setLineDash([]);
+
+    const points = days.map((day, index) => ({
+      x: xFor(index),
+      y: yFor(day.total),
+      total: day.total,
+      index,
+    }));
+    const gradient = context.createLinearGradient(0, plot.top, 0, plot.bottom);
+    gradient.addColorStop(0, colorMix(accent, surface, 0.2));
+    gradient.addColorStop(1, colorMix(accent, surface, 0.96));
+    context.beginPath();
+    context.moveTo(points[0].x, plot.bottom);
+    points.forEach((point) => context.lineTo(point.x, point.y));
+    context.lineTo(points[points.length - 1].x, plot.bottom);
+    context.closePath();
+    context.fillStyle = gradient;
+    context.globalAlpha = 0.46;
+    context.fill();
+    context.globalAlpha = 1;
+
+    context.beginPath();
+    points.forEach((point, index) => {
+      if (index === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    });
+    context.strokeStyle = accent;
+    context.lineWidth = 2.4;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.stroke();
+
+    points.forEach((point) => {
+      context.beginPath();
+      context.arc(point.x, point.y, point.total > 0 ? 2.4 : 1.7, 0, Math.PI * 2);
+      context.fillStyle = point.total > 0 ? accent : surface;
+      context.fill();
+      context.strokeStyle = accent;
+      context.lineWidth = 1.4;
+      context.stroke();
+    });
+
+    context.textAlign = "center";
+    context.textBaseline = "top";
+    context.fillStyle = muted;
+    days.forEach((day, index) => {
+      if (index !== 0 && index !== days.length - 1 && (index + 1) % 5 !== 0) return;
+      context.fillText(`${index + 1}日`, xFor(index), plot.bottom + 8);
+    });
+  }
+
+  function openYearReview() {
+    runtime.reviewYear = new Date().getFullYear();
+    runtime.reviewMonth = null;
+    renderYearReview();
+    openSheet(elements.yearReviewSheet);
+  }
+
+  function selectReviewMonth(monthIndex) {
+    runtime.reviewMonth = monthIndex;
+    renderYearReview();
+    elements.yearReviewSheetBody.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeYearMonthDetail() {
+    runtime.reviewMonth = null;
+    renderYearReview();
+    elements.yearReviewSheetBody.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function buildExportModel(rangeType = runtime.exportRange) {
+    const now = new Date();
+    const nowTime = now.getTime();
+    let start;
+    let end;
+    let label;
+    let detailLabel;
+
+    if (rangeType === "week") {
+      start = dateStartFor("week");
+      end = nowTime + 1;
+      label = "本周数据";
+      detailLabel = "本周一至今天";
+    } else if (rangeType === "month") {
+      start = dateStartFor("month");
+      end = nowTime + 1;
+      label = "本月数据";
+      detailLabel = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月`;
+    } else if (rangeType === "custom-month") {
+      const year = Number(elements.exportYearSelect.value) || now.getFullYear();
+      const monthIndex = Math.max(0, Math.min(11, Number(elements.exportMonthSelect.value)));
+      const range = localMonthRange(year, monthIndex);
+      start = range.start;
+      end = Math.min(range.end, nowTime + 1);
+      label = `${year} 年 ${monthIndex + 1} 月`;
+      detailLabel = `${year}.${String(monthIndex + 1).padStart(2, "0")}`;
+    } else if (rangeType === "year") {
+      start = localYearRange(now.getFullYear()).start;
+      end = nowTime + 1;
+      label = `${now.getFullYear()} 年数据`;
+      detailLabel = `今年 1 月至今`;
+    } else {
+      start = localDayStart(nowTime);
+      end = nowTime + 1;
+      label = "今日数据";
+      detailLabel = formatRangeDate(nowTime);
+    }
+
+    if (end <= start) end = start + 1;
+    const summary = summarizeEventRange(events, start, end);
+    const points =
+      rangeType === "day"
+        ? hourlySeries(start, end)
+        : rangeType === "year"
+          ? monthlySeries(now.getFullYear()).filter((point) => point.start <= nowTime)
+          : dailySeries(start, end);
+    const bestPoint = points.reduce(
+      (best, point) => (!best || point.total > best.total ? point : best),
+      null
+    );
+    const activeDayCount =
+      rangeType === "day"
+        ? summary.count
+          ? 1
+          : 0
+        : summary.activeDays;
+    const average = activeDayCount
+      ? Math.round((summary.total / activeDayCount) * 10) / 10
+      : 0;
+    const sources = summary.bySource
+      .filter((source) => source.count > 0)
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      rangeType,
+      start,
+      end,
+      label,
+      detailLabel,
+      summary,
+      points,
+      bestPoint,
+      activeDayCount,
+      average,
+      sources,
+      dateLabel:
+        start === localDayStart(nowTime)
+          ? formatRangeDate(nowTime)
+          : `${formatRangeDate(start)} — ${formatRangeDate(end - 1)}`,
+    };
+  }
+
+  function populateExportSelectors() {
+    const currentYear = new Date().getFullYear();
+    const earliestYear = events.length
+      ? new Date(Number(events[0].claimedAt)).getFullYear()
+      : currentYear;
+    const years = [];
+    for (let year = currentYear; year >= Math.min(earliestYear, currentYear); year -= 1) {
+      years.push(year);
+    }
+    elements.exportYearSelect.innerHTML = years
+      .map((year) => `<option value="${year}">${year} 年</option>`)
+      .join("");
+    elements.exportMonthSelect.innerHTML = Array.from(
+      { length: 12 },
+      (_, index) => `<option value="${index}">${index + 1} 月</option>`
+    ).join("");
+    elements.exportYearSelect.value = String(currentYear);
+    elements.exportMonthSelect.value = String(new Date().getMonth());
+  }
+
+  function renderExportPreview() {
+    const model = buildExportModel();
+    elements.exportRangeLabel.textContent = model.label;
+    elements.exportRangeDates.textContent = model.dateLabel;
+    elements.exportPreviewTotal.textContent = String(model.summary.total);
+    elements.exportMockTotal.textContent = String(model.summary.total);
+    elements.exportMockDays.textContent = String(model.activeDayCount);
+    elements.exportMockRecords.textContent = String(model.summary.count);
+    $$("[data-export-range]").forEach((button) => {
+      const active = button.dataset.exportRange === runtime.exportRange;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    elements.exportMonthFields.hidden = runtime.exportRange !== "custom-month";
+  }
+
+  function openExportReport() {
+    runtime.exportRange = "day";
+    populateExportSelectors();
+    renderExportPreview();
+    openSheet(elements.exportReportSheet);
+  }
+
+  function setExportRange(rangeType) {
+    if (!["day", "week", "month", "custom-month", "year"].includes(rangeType)) return;
+    runtime.exportRange = rangeType;
+    renderExportPreview();
+  }
+
+  function hexToRgba(hex, alpha) {
+    const [r, g, b] = parseHex(hex);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function reportFont(size, weight = 700) {
+    return `${weight} ${size}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif`;
+  }
+
+  function roundRectPath(context, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.lineTo(x + width - r, y);
+    context.quadraticCurveTo(x + width, y, x + width, y + r);
+    context.lineTo(x + width, y + height - r);
+    context.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    context.lineTo(x + r, y + height);
+    context.quadraticCurveTo(x, y + height, x, y + height - r);
+    context.lineTo(x, y + r);
+    context.quadraticCurveTo(x, y, x + r, y);
+    context.closePath();
+  }
+
+  function fillRoundRect(context, x, y, width, height, radius, fillStyle, strokeStyle = "") {
+    roundRectPath(context, x, y, width, height, radius);
+    context.fillStyle = fillStyle;
+    context.fill();
+    if (strokeStyle) {
+      context.strokeStyle = strokeStyle;
+      context.lineWidth = 2;
+      context.stroke();
+    }
+  }
+
+  function loadReportImage(source) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = source;
+    });
+  }
+
+  function reportSourceColor(accent, index) {
+    const tones = [
+      "#6e75ff",
+      "#25b7a5",
+      "#ec9c32",
+      "#e85f7c",
+      "#3d9fea",
+      "#55b873",
+      "#8b6ddb",
+      "#7c8ba0",
+      "#ba78b8",
+    ];
+    return index === 0
+      ? accent
+      : colorMix(accent, tones[index % tones.length], 0.42);
+  }
+
+  function drawReportLineChart(context, model, plot, colors) {
+    const points = model.points;
+    const maxValue = Math.max(4, ...points.map((point) => point.total));
+    const ceiling = Math.ceil(maxValue / 4) * 4;
+    const xFor = (index) =>
+      plot.left + (plot.width * index) / Math.max(1, points.length - 1);
+    const yFor = (value) => plot.top + plot.height - (plot.height * value) / ceiling;
+
+    context.save();
+    context.font = reportFont(28, 600);
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    for (let step = 0; step <= 4; step += 1) {
+      const value = (ceiling / 4) * step;
+      const y = yFor(value);
+      context.beginPath();
+      context.setLineDash([10, 14]);
+      context.strokeStyle = colors.line;
+      context.lineWidth = 2;
+      context.moveTo(plot.left, y);
+      context.lineTo(plot.left + plot.width, y);
+      context.stroke();
+      context.setLineDash([]);
+      context.fillStyle = colors.muted;
+      context.fillText(String(Math.round(value)), plot.left - 22, y);
+    }
+
+    const coords = points.map((point, index) => ({
+      x: xFor(index),
+      y: yFor(point.total),
+    }));
+    const area = context.createLinearGradient(0, plot.top, 0, plot.top + plot.height);
+    area.addColorStop(0, hexToRgba(colors.accent, 0.34));
+    area.addColorStop(1, hexToRgba(colors.accent, 0.02));
+    context.beginPath();
+    context.moveTo(coords[0].x, plot.top + plot.height);
+    coords.forEach((point) => context.lineTo(point.x, point.y));
+    context.lineTo(coords[coords.length - 1].x, plot.top + plot.height);
+    context.closePath();
+    context.fillStyle = area;
+    context.fill();
+
+    context.beginPath();
+    coords.forEach((point, index) => {
+      if (index === 0) context.moveTo(point.x, point.y);
+      else context.lineTo(point.x, point.y);
+    });
+    context.strokeStyle = colors.accent;
+    context.lineWidth = 8;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.stroke();
+
+    coords.forEach((point) => {
+      context.beginPath();
+      context.arc(point.x, point.y, 9, 0, Math.PI * 2);
+      context.fillStyle = colors.surface;
+      context.fill();
+      context.lineWidth = 5;
+      context.strokeStyle = colors.accent;
+      context.stroke();
+    });
+
+    context.font = reportFont(26, 600);
+    context.fillStyle = colors.muted;
+    context.textAlign = "center";
+    context.textBaseline = "top";
+    const labelEvery =
+      points.length > 24 ? 5 : points.length > 12 ? 2 : 1;
+    points.forEach((point, index) => {
+      const show =
+        index === 0 ||
+        index === points.length - 1 ||
+        index % labelEvery === 0;
+      if (show) {
+        context.fillText(
+          point.label,
+          xFor(index),
+          plot.top + plot.height + 24
+        );
+      }
+    });
+    context.restore();
+  }
+
+  async function generateReportBlob(model) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 3840;
+    canvas.height = 2160;
+    const context = canvas.getContext("2d");
+    const styles = getComputedStyle(document.documentElement);
+    const accent = styles.getPropertyValue("--accent").trim() || "#2f7dff";
+    const accentStrong =
+      styles.getPropertyValue("--accent-strong").trim() || accent;
+    const onAccent =
+      styles.getPropertyValue("--on-accent").trim() || "#ffffff";
+    const dark = data.settings.dark;
+    const theme = THEMES.find((item) => item.id === data.settings.theme) || THEMES[0];
+    const colors = {
+      accent,
+      accentStrong,
+      onAccent,
+      background: dark ? "#081324" : "#f3f7ff",
+      panel: dark ? "#142743" : "#ffffff",
+      panelAlt: dark ? "#102039" : "#f7faff",
+      text: dark ? "#edf6ff" : "#14243c",
+      muted: dark ? "#a3b7ce" : "#71839b",
+      line: dark ? "rgba(148, 201, 255, 0.16)" : "rgba(62, 124, 199, 0.14)",
+      surface: dark ? "#142743" : "#ffffff",
+    };
+
+    const background = context.createLinearGradient(0, 0, 3840, 2160);
+    background.addColorStop(0, colors.background);
+    background.addColorStop(1, dark ? "#0d1d33" : "#e5efff");
+    context.fillStyle = background;
+    context.fillRect(0, 0, 3840, 2160);
+
+    let glow = context.createRadialGradient(300, 100, 0, 300, 100, 900);
+    glow.addColorStop(0, hexToRgba(accent, dark ? 0.24 : 0.16));
+    glow.addColorStop(1, hexToRgba(accent, 0));
+    context.fillStyle = glow;
+    context.fillRect(0, 0, 1500, 1400);
+    glow = context.createRadialGradient(3500, 450, 0, 3500, 450, 800);
+    glow.addColorStop(0, hexToRgba(accentStrong, dark ? 0.18 : 0.1));
+    glow.addColorStop(1, hexToRgba(accentStrong, 0));
+    context.fillStyle = glow;
+    context.fillRect(2400, 0, 1440, 1400);
+
+    fillRoundRect(
+      context,
+      120,
+      92,
+      3600,
+      310,
+      42,
+      dark ? "rgba(20,39,67,0.92)" : "rgba(255,255,255,0.9)",
+      colors.line
+    );
+    try {
+      const logo = await loadReportImage(
+        dark ? "./assets/platform-logo-white.png" : "./assets/platform-logo-blue.png"
+      );
+      const logoHeight = 94;
+      const logoWidth = Math.min(330, logo.width * (logoHeight / logo.height));
+      context.drawImage(logo, 178, 204, logoWidth, logoHeight);
+    } catch (error) {
+      context.fillStyle = colors.accent;
+      context.font = reportFont(62, 900);
+      context.fillText("SG.像素2", 178, 282);
+    }
+
+    context.fillStyle = colors.muted;
+    context.font = reportFont(24, 800);
+    context.textAlign = "left";
+    context.fillText("PIXEL SURVIVAL GAME 2 · DATA BRIEF", 540, 205);
+    context.fillStyle = colors.text;
+    context.font = reportFont(82, 900);
+    context.fillText("钻石手账", 540, 296);
+    context.fillStyle = colors.accent;
+    context.font = reportFont(31, 800);
+    context.fillText(`${model.label} · ${model.detailLabel}`, 540, 350);
+
+    context.textAlign = "right";
+    context.fillStyle = colors.muted;
+    context.font = reportFont(25, 700);
+    context.fillText(
+      `导出日期 ${formatRangeDate(Date.now())}`,
+      3650,
+      205
+    );
+    fillRoundRect(
+      context,
+      3180,
+      236,
+      470,
+      92,
+      46,
+      dark ? hexToRgba(accent, 0.2) : hexToRgba(accent, 0.1),
+      hexToRgba(accent, 0.2)
+    );
+    context.fillStyle = colors.accent;
+    context.font = reportFont(31, 850);
+    context.textAlign = "center";
+    context.fillText(`${theme.name} · ${dark ? "深色" : "浅色"}简报`, 3415, 294);
+
+    const cardY = 444;
+    const cardGap = 38;
+    const cardWidth = (3600 - cardGap * 3) / 4;
+    const kpis = [
+      ["总收获", `${model.summary.total}`, "钻石"],
+      ["活跃天数", `${model.activeDayCount}`, "天"],
+      ["记录次数", `${model.summary.count}`, "次"],
+      ["活跃日均", `${model.average}`, "钻石"],
+    ];
+    kpis.forEach(([label, value, unit], index) => {
+      const x = 120 + index * (cardWidth + cardGap);
+      const active = index === 0;
+      const fill = active
+        ? (() => {
+            const gradient = context.createLinearGradient(
+              x,
+              cardY,
+              x + cardWidth,
+              cardY + 300
+            );
+            gradient.addColorStop(0, accent);
+            gradient.addColorStop(1, accentStrong);
+            return gradient;
+          })()
+        : colors.panel;
+      fillRoundRect(
+        context,
+        x,
+        cardY,
+        cardWidth,
+        300,
+        34,
+        fill,
+        active ? hexToRgba(colors.onAccent === "#14243c" ? "#14243c" : "#ffffff", 0.18) : colors.line
+      );
+      context.fillStyle = active ? colors.onAccent : colors.muted;
+      context.font = reportFont(29, 750);
+      context.textAlign = "left";
+      context.fillText(label, x + 36, cardY + 70);
+      context.fillStyle = active ? colors.onAccent : colors.text;
+      context.font = reportFont(88, 950);
+      context.fillText(value, x + 36, cardY + 193);
+      const valueWidth = context.measureText(value).width;
+      context.font = reportFont(29, 700);
+      context.fillStyle = active ? colors.onAccent : colors.muted;
+      context.fillText(unit, x + 45 + valueWidth, cardY + 190);
+    });
+
+    fillRoundRect(context, 120, 802, 2460, 1110, 38, colors.panel, colors.line);
+    context.fillStyle = colors.muted;
+    context.font = reportFont(25, 800);
+    context.textAlign = "left";
+    context.fillText("PERFORMANCE OVERVIEW", 176, 888);
+    context.fillStyle = colors.text;
+    context.font = reportFont(48, 900);
+    context.fillText("钻石收益趋势", 176, 950);
+    context.textAlign = "right";
+    context.fillStyle = colors.accent;
+    context.font = reportFont(44, 900);
+    context.fillText(`${model.summary.total} 钻石`, 2518, 948);
+    context.fillStyle = colors.muted;
+    context.font = reportFont(24, 650);
+    context.fillText(
+      model.rangeType === "day"
+        ? "今日按小时统计"
+        : model.rangeType === "year"
+          ? "今年按月统计"
+          : "所选区间按日统计",
+      2518,
+      1001
+    );
+    drawReportLineChart(
+      context,
+      model,
+      { left: 240, top: 1085, width: 2180, height: 650 },
+      colors
+    );
+
+    fillRoundRect(context, 2640, 802, 1080, 1110, 38, colors.panel, colors.line);
+    context.fillStyle = colors.muted;
+    context.font = reportFont(25, 800);
+    context.textAlign = "left";
+    context.fillText("DIAMOND SOURCES", 2702, 888);
+    context.fillStyle = colors.text;
+    context.font = reportFont(45, 900);
+    context.fillText("来源构成", 2702, 950);
+    const reportSources =
+      model.sources.length
+        ? model.sources.slice(0, 8)
+        : [{ ...SOURCE_CATEGORY_META[0], total: 0, count: 0 }];
+    const rowHeight = 94;
+    reportSources.forEach((source, index) => {
+      const y = 1035 + index * rowHeight;
+      const percentage = model.summary.total
+        ? Math.round((source.total / model.summary.total) * 100)
+        : 0;
+      const color = reportSourceColor(accent, index);
+      context.fillStyle = color;
+      context.beginPath();
+      context.arc(2722, y, 10, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = colors.text;
+      context.font = reportFont(30, 760);
+      context.textAlign = "left";
+      context.fillText(source.name, 2752, y + 9);
+      context.textAlign = "right";
+      context.fillStyle = colors.text;
+      context.font = reportFont(34, 900);
+      context.fillText(String(source.total), 3650, y + 9);
+      context.fillStyle = colors.muted;
+      context.font = reportFont(22, 650);
+      context.fillText(`${percentage}%`, 3668, y + 50);
+      fillRoundRect(
+        context,
+        2752,
+        y + 30,
+        804,
+        12,
+        6,
+        colors.panelAlt
+      );
+      if (percentage > 0) {
+        fillRoundRect(
+          context,
+          2752,
+          y + 30,
+          Math.max(18, (804 * percentage) / 100),
+          12,
+          6,
+          color
+        );
+      }
+    });
+
+    fillRoundRect(context, 120, 1948, 3600, 126, 30, colors.panelAlt, colors.line);
+    context.fillStyle = colors.text;
+    context.font = reportFont(30, 850);
+    context.textAlign = "left";
+    context.fillText(
+      `最高${model.rangeType === "day" ? "时段" : model.rangeType === "year" ? "月份" : "单日"}  ${
+        model.bestPoint?.total ? `${model.bestPoint.label} · ${model.bestPoint.total} 钻石` : "暂无记录"
+      }`,
+      176,
+      2023
+    );
+    context.fillStyle = colors.muted;
+    context.font = reportFont(23, 650);
+    context.fillText(
+      "像素生存者2 · 钻石手账  |  数据仅来自本机记录  |  local-first data journal",
+      176,
+      2057
+    );
+    context.textAlign = "right";
+    context.fillStyle = colors.accent;
+    context.font = reportFont(28, 850);
+    context.fillText(`${theme.name}主题`, 3638, 2023);
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("简报图片生成失败"))),
+        "image/png"
+      );
+    });
+  }
+
+  function reportFileName(model) {
+    const stamp = new Date();
+    const date = [
+      stamp.getFullYear(),
+      String(stamp.getMonth() + 1).padStart(2, "0"),
+      String(stamp.getDate()).padStart(2, "0"),
+    ].join("");
+    const range = model.detailLabel
+      .replace(/[\\/:*?"<>|\s]+/g, "-")
+      .replace(/\./g, "");
+    return `钻石手账-${range}-4K简报-${date}.png`;
+  }
+
+  function downloadBlobFile(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  async function exportReport() {
+    const button = elements.generateReportBtn;
+    if (button.disabled) return;
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = "正在生成 4K 简报…";
+    try {
+      const model = buildExportModel();
+      const blob = await generateReportBlob(model);
+      downloadBlobFile(blob, reportFileName(model));
+      showToast("4K 简报已生成，正在下载");
+    } catch (error) {
+      console.error(error);
+      showToast("简报生成失败，请稍后重试");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 
   function formatTime(timestamp) {
@@ -1663,6 +2688,8 @@
   function renderAnalytics() {
     renderStats();
     renderDailyTrend();
+    renderCompanionStrip();
+    if (elements.yearReviewSheet.classList.contains("open")) renderYearReview();
   }
 
   function renderLedger() {
@@ -2519,6 +3546,26 @@
           item.setAttribute("aria-selected", String(active));
         });
         renderAnalytics();
+        return;
+      }
+      const yearStep = event.target.closest("[data-year-step]");
+      if (yearStep) {
+        const bounds = reviewYearBounds();
+        const nextYear = runtime.reviewYear + Number(yearStep.dataset.yearStep);
+        if (nextYear < bounds.min || nextYear > bounds.max) return;
+        runtime.reviewYear = nextYear;
+        runtime.reviewMonth = null;
+        renderYearReview();
+        return;
+      }
+      const reviewMonthButton = event.target.closest("[data-review-month]");
+      if (reviewMonthButton) {
+        selectReviewMonth(Number(reviewMonthButton.dataset.reviewMonth));
+        return;
+      }
+      const exportRangeButton = event.target.closest("[data-export-range]");
+      if (exportRangeButton) {
+        setExportRange(exportRangeButton.dataset.exportRange);
       }
     });
 
@@ -2580,6 +3627,12 @@
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#ledgerBtn").addEventListener("click", openLedger);
     $("#dataLedgerBtn").addEventListener("click", openLedger);
+    $("#yearReviewBtn").addEventListener("click", openYearReview);
+    $("#exportReportBtn").addEventListener("click", openExportReport);
+    $("#yearMonthBackBtn").addEventListener("click", closeYearMonthDetail);
+    $("#generateReportBtn").addEventListener("click", exportReport);
+    elements.exportYearSelect.addEventListener("change", renderExportPreview);
+    elements.exportMonthSelect.addEventListener("change", renderExportPreview);
     $("#qqGroupBtn").addEventListener("click", () => openSheet(elements.qqGroupSheet));
     $$("[data-nav-page]").forEach((button) => {
       button.addEventListener("click", () => showPage(button.dataset.navPage));
@@ -2693,6 +3746,8 @@
       elements.settingsSheet,
       elements.qqGroupSheet,
       elements.ledgerSheet,
+      elements.yearReviewSheet,
+      elements.exportReportSheet,
     ].forEach((backdrop) => {
       backdrop.addEventListener("click", (event) => {
         if (event.target === backdrop) closeSheet(backdrop);
@@ -2720,6 +3775,16 @@
     window.addEventListener("resize", () => {
       const dataPage = document.querySelector('[data-page-view="data"]');
       if (dataPage && !dataPage.hidden) renderDailyTrend();
+      if (
+        elements.yearMonthDetail &&
+        !elements.yearMonthDetail.hidden &&
+        elements.yearReviewSheet.classList.contains("open")
+      ) {
+        const monthRange = localMonthRange(runtime.reviewYear, runtime.reviewMonth);
+        drawMonthChart(
+          dailySeries(monthRange.start, Math.min(monthRange.end, Date.now() + 1))
+        );
+      }
     });
 
     window.addEventListener("beforeinstallprompt", (event) => {
@@ -2740,7 +3805,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=25", { updateViaCache: "none" })
+        .register("./sw.js?v=26", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
@@ -2773,6 +3838,10 @@
     } catch (error) {
       console.warn("无法读取领取记录。", error);
       showToast("本地数据库暂不可用，请确认浏览器没有禁用存储");
+    }
+    if (!Number.isFinite(Number(data.profile.startedAt)) || data.profile.startedAt <= 0) {
+      data.profile.startedAt = Number(events[0]?.claimedAt) || Date.now();
+      saveData();
     }
     await loadAvatar();
     renderAll();

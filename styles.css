@@ -3429,3 +3429,812 @@ html[data-mode="dark"] .bottom-nav {
     margin-top: 6px;
   }
 }
+
+/* V26 preview: companion strip, annual review, and local 4K report export. */
+.companion-strip {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  margin: 8px 2px 2px;
+  gap: 10px;
+  color: var(--muted);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--surface-solid) 58%, transparent));
+  border: 1px solid color-mix(in srgb, #ffffff 54%, var(--line));
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 64%, transparent);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.companion-strip > span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.companion-strip strong {
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.companion-total {
+  justify-content: flex-end;
+}
+
+.companion-total img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.data-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: -2px;
+  gap: 7px;
+}
+
+.data-tool-button {
+  display: grid;
+  min-width: 0;
+  min-height: 61px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  padding: 8px 9px;
+  gap: 8px;
+  text-align: left;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--surface-solid) 72%, transparent), color-mix(in srgb, var(--surface-solid) 40%, transparent));
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 64%, transparent),
+    var(--shadow-small);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.data-tool-button:active {
+  transform: scale(0.97);
+}
+
+.data-tool-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--on-accent);
+  background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+  border-radius: 11px;
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--accent) 20%, transparent);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.data-tool-icon.export {
+  font-size: 19px;
+}
+
+.data-tool-icon.ledger {
+  font-size: 18px;
+}
+
+.data-tool-button > span:last-child {
+  min-width: 0;
+}
+
+.data-tool-button strong,
+.data-tool-button small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-tool-button strong {
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.data-tool-button small {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.year-review-sheet,
+.export-report-sheet {
+  max-width: 590px;
+}
+
+.year-review-sheet .sheet-header,
+.export-report-sheet .sheet-header {
+  margin-bottom: 12px;
+}
+
+.year-switcher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 12px;
+  gap: 14px;
+}
+
+.year-switcher button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--accent-strong);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 25px;
+  line-height: 1;
+}
+
+.year-switcher button:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+
+.year-switcher strong {
+  min-width: 90px;
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: center;
+}
+
+.year-summary-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  color: var(--on-accent);
+  background:
+    radial-gradient(circle at 91% -20%, rgba(255, 255, 255, 0.32), transparent 42%),
+    linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border: 1px solid color-mix(in srgb, #ffffff 28%, transparent);
+  border-radius: 24px;
+  box-shadow: 0 17px 35px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.year-summary-card > span {
+  color: color-mix(in srgb, var(--on-accent) 72%, transparent);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.year-summary-card > strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 47px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+  line-height: 1;
+}
+
+.year-summary-card > strong small {
+  margin-left: 5px;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+.year-summary-card > p {
+  margin: 6px 0 0;
+  color: color-mix(in srgb, var(--on-accent) 74%, transparent);
+  font-size: 9px;
+}
+
+.year-kpis,
+.year-month-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+  gap: 7px;
+}
+
+.year-kpis span {
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+}
+
+.year-kpis b,
+.year-kpis small {
+  display: block;
+}
+
+.year-kpis b {
+  overflow: hidden;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.year-kpis small {
+  margin-top: 1px;
+  color: color-mix(in srgb, var(--on-accent) 66%, transparent);
+  font-size: 7px;
+}
+
+.year-source-card {
+  padding: 14px;
+  margin-top: 10px;
+  background: color-mix(in srgb, var(--surface-solid) 64%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-small);
+}
+
+.year-subheading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 2px;
+  margin: 16px 0 10px;
+  gap: 10px;
+}
+
+.year-source-card .year-subheading,
+.year-month-detail .year-source-list {
+  padding: 0;
+  margin-top: 0;
+}
+
+.year-subheading h3 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.year-subheading > span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.year-source-list {
+  display: grid;
+  margin-top: 3px;
+  gap: 2px;
+}
+
+.year-source-row {
+  display: grid;
+  position: relative;
+  min-height: 35px;
+  grid-template-columns: 9px minmax(0, 1fr) auto 32px;
+  align-items: center;
+  padding: 3px 2px 7px;
+  gap: 7px;
+}
+
+.year-source-row.compact {
+  min-height: 32px;
+}
+
+.year-source-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--source-color);
+  border-radius: 50%;
+}
+
+.year-source-name {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.year-source-row strong {
+  color: var(--text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+}
+
+.year-source-row strong small {
+  margin-left: 2px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 650;
+}
+
+.year-source-percent {
+  color: var(--muted);
+  font-size: 8px;
+  text-align: right;
+}
+
+.year-source-row > i {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  left: 18px;
+  height: 2px;
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 99px;
+}
+
+.year-source-row > i::after {
+  display: block;
+  width: var(--source-width);
+  height: 100%;
+  content: "";
+  background: var(--accent);
+  border-radius: inherit;
+}
+
+.year-month-list {
+  display: grid;
+  gap: 7px;
+}
+
+.year-month-row {
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: 34px minmax(0, 1fr) auto 14px;
+  align-items: center;
+  padding: 8px 10px;
+  gap: 9px;
+  text-align: left;
+  background: color-mix(in srgb, var(--surface-solid) 58%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.year-month-row:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.year-month-index {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.year-month-copy {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding-bottom: 7px;
+}
+
+.year-month-copy strong,
+.year-month-copy small {
+  display: block;
+}
+
+.year-month-copy strong {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.year-month-copy small {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.year-month-copy i {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  overflow: hidden;
+  background: var(--line);
+  border-radius: 99px;
+}
+
+.year-month-copy i::after {
+  display: block;
+  width: var(--month-width);
+  height: 100%;
+  content: "";
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  border-radius: inherit;
+}
+
+.year-month-value {
+  color: var(--text);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.year-month-value small {
+  margin-left: 2px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 650;
+}
+
+.year-month-arrow {
+  color: var(--faint);
+  font-size: 17px;
+}
+
+.year-month-detail {
+  padding-top: 1px;
+}
+
+.year-month-back {
+  min-height: 32px;
+  padding: 0 11px;
+  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.year-month-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 12px;
+}
+
+.year-month-title-row h3 {
+  margin: 2px 0 0;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.year-month-title-row > strong {
+  color: var(--accent-strong);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+}
+
+.year-month-title-row > strong small {
+  margin-left: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.year-month-kpis span {
+  padding: 10px 11px;
+  background: color-mix(in srgb, var(--surface-solid) 56%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+}
+
+.year-month-kpis b,
+.year-month-kpis small {
+  display: block;
+}
+
+.year-month-kpis b {
+  color: var(--text);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 880;
+}
+
+.year-month-kpis small {
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.month-chart-wrap {
+  position: relative;
+  width: 100%;
+  height: 184px;
+  margin: 10px 0 12px;
+  background: color-mix(in srgb, var(--surface-solid) 42%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+}
+
+#yearMonthChart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.month-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.export-intro {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.export-range-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 4px;
+  gap: 3px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.export-range-grid button {
+  min-height: 35px;
+  padding: 0 4px;
+  color: var(--muted);
+  background: transparent;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 780;
+  white-space: nowrap;
+}
+
+.export-range-grid button.active {
+  color: var(--on-accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.export-month-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 9px;
+  gap: 8px;
+}
+
+.export-month-fields label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding: 7px 9px;
+  gap: 8px;
+  background: color-mix(in srgb, var(--surface-solid) 52%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.export-month-fields span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.export-month-fields select {
+  min-width: 0;
+  padding: 3px 4px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.export-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px;
+  margin-top: 10px;
+  gap: 12px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--surface-solid) 48%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
+  border-radius: 17px;
+}
+
+.export-preview-card strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.export-preview-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.export-preview-total {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.export-preview-total span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.export-preview-total strong {
+  color: var(--accent-strong);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.export-template-preview {
+  position: relative;
+  overflow: hidden;
+  min-height: 196px;
+  padding: 15px;
+  margin-top: 10px;
+  color: var(--ink, #14243c);
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 35%),
+    linear-gradient(145deg, #fbfdff, #eaf2ff);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 19px;
+  box-shadow: inset 0 0 0 1px rgba(64, 100, 170, 0.08);
+}
+
+html[data-mode="dark"] .export-template-preview {
+  color: #edf6ff;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 35%),
+    linear-gradient(145deg, #172c4a, #0b1a2e);
+  border-color: rgba(146, 198, 255, 0.15);
+}
+
+.export-preview-glow {
+  position: absolute;
+  top: -55px;
+  right: -30px;
+  width: 180px;
+  height: 180px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 50%;
+  filter: blur(24px);
+}
+
+.export-preview-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.export-preview-header b {
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.export-preview-header span {
+  color: var(--accent-strong);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.export-preview-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 13px;
+  gap: 6px;
+}
+
+.export-preview-grid > div {
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(70, 104, 165, 0.1);
+  border-radius: 11px;
+}
+
+html[data-mode="dark"] .export-preview-grid > div {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(177, 216, 255, 0.12);
+}
+
+.export-preview-grid span,
+.export-preview-grid strong {
+  display: block;
+}
+
+.export-preview-grid span {
+  color: var(--muted);
+  font-size: 7px;
+}
+
+.export-preview-grid strong {
+  margin-top: 1px;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 950;
+}
+
+.export-preview-chart {
+  display: flex;
+  height: 57px;
+  align-items: flex-end;
+  padding: 9px 8px 0;
+  margin-top: 7px;
+  gap: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.export-preview-chart i {
+  width: 100%;
+  height: 24%;
+  background: linear-gradient(to top, var(--accent-strong), color-mix(in srgb, var(--accent) 35%, transparent));
+  border-radius: 4px 4px 0 0;
+  opacity: 0.82;
+}
+
+.export-preview-chart i:nth-child(2) { height: 58%; }
+.export-preview-chart i:nth-child(3) { height: 36%; }
+.export-preview-chart i:nth-child(4) { height: 76%; }
+.export-preview-chart i:nth-child(5) { height: 47%; }
+.export-preview-chart i:nth-child(6) { height: 91%; }
+.export-preview-chart i:nth-child(7) { height: 68%; }
+
+.generate-report-button {
+  margin-top: 12px;
+}
+
+.export-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 350px) {
+  .companion-strip {
+    padding-inline: 10px;
+    font-size: 9px;
+  }
+
+  .data-tool-button {
+    grid-template-columns: 29px minmax(0, 1fr);
+    padding-inline: 7px;
+    gap: 6px;
+  }
+
+  .data-tool-icon {
+    width: 29px;
+    height: 29px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .data-tool-button strong {
+    font-size: 10px;
+  }
+
+  .export-range-grid button {
+    font-size: 8px;
+  }
+}
