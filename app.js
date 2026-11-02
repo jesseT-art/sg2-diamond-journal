@@ -1552,7 +1552,7 @@
               x,
               cardY,
               x + cardWidth,
-              cardY + 300
+              cardY + 310
             );
             gradient.addColorStop(0, accentStrong);
             gradient.addColorStop(
@@ -1568,20 +1568,20 @@
         x,
         cardY,
         cardWidth,
-        300,
+        310,
         34,
         fill,
         active ? hexToRgba(dark ? "#ffffff" : colors.text, 0.14) : colors.line
       );
       const iconX = x + 32;
-      const iconY = cardY + 38;
+      const iconY = cardY + 91;
       fillRoundRect(
         context,
         iconX,
         iconY,
-        118,
-        118,
-        30,
+        190,
+        190,
+        42,
         active
           ? hexToRgba(dark ? "#ffffff" : "#ffffff", 0.22)
           : hexToRgba(accent, dark ? 0.18 : 0.08),
@@ -1590,7 +1590,7 @@
       if (
         iconType === "diamond" &&
         reportImages.diamond &&
-        drawContainedImage(context, reportImages.diamond, iconX + 11, iconY + 11, 96, 96)
+        drawContainedImage(context, reportImages.diamond, iconX + 10, iconY + 10, 170, 170)
       ) {
         // The pixel diamond artwork already contains its own icon treatment.
       } else {
@@ -1599,21 +1599,18 @@
           iconType,
           iconX + 16,
           iconY + 16,
-          86,
+          158,
           active ? activeText : accent
         );
       }
       context.fillStyle = active ? activeText : colors.muted;
-      context.font = reportFont(29, 750);
+      context.font = reportFont(33, 800);
       context.textAlign = "left";
-      context.fillText(label, x + 174, cardY + 70);
-      context.fillStyle = active ? activeText : colors.text;
-      context.font = reportFont(88, 950);
-      context.fillText(value, x + 174, cardY + 193);
-      const valueWidth = context.measureText(value).width;
-      context.font = reportFont(29, 700);
-      context.fillStyle = active ? activeText : colors.muted;
-      context.fillText(unit, x + 183 + valueWidth, cardY + 190);
+      context.fillText(`${label} · ${unit}`, x + 36, cardY + 63);
+      context.fillStyle = active ? (dark ? "#ffffff" : colors.text) : colors.text;
+      context.font = reportFont(105, 950);
+      context.textAlign = "right";
+      context.fillText(value, x + cardWidth - 38, cardY + 226);
     });
 
     fillRoundRect(context, 120, 802, 2460, 1110, 38, colors.panel, colors.line);
@@ -1662,22 +1659,9 @@
     context.font = reportFont(25, 800);
     context.textAlign = "left";
     context.fillText("DIAMOND SOURCES", 2702, 888);
-    fillRoundRect(
-      context,
-      2702,
-      902,
-      58,
-      58,
-      17,
-      hexToRgba(accent, dark ? 0.2 : 0.09),
-      hexToRgba(accent, 0.14)
-    );
-    if (reportImages.diamond) {
-      drawContainedImage(context, reportImages.diamond, 2714, 914, 34, 34);
-    }
     context.fillStyle = colors.text;
-    context.font = reportFont(45, 900);
-    context.fillText("来源构成", 2780, 950);
+    context.font = reportFont(48, 900);
+    context.fillText("来源构成", 2702, 950);
     const reportSources =
       model.sources.length
         ? model.sources.slice(0, 8)
@@ -1754,7 +1738,7 @@
 
     fillRoundRect(context, 120, 1948, 3600, 126, 30, colors.panelAlt, colors.line);
     if (reportImages.diamond) {
-      drawContainedImage(context, reportImages.diamond, 176, 1985, 48, 48);
+      drawContainedImage(context, reportImages.diamond, 176, 1975, 72, 72);
     }
     context.fillStyle = colors.text;
     context.font = reportFont(30, 850);
@@ -1763,15 +1747,15 @@
       `最高${model.rangeType === "day" ? "时段" : model.rangeType === "year" ? "月份" : "单日"}  ${
         model.bestPoint?.total ? `${model.bestPoint.label} · ${model.bestPoint.total} 钻石` : "暂无记录"
       }`,
-      240,
-      2023
+      264,
+      2008
     );
     context.fillStyle = colors.muted;
     context.font = reportFont(23, 650);
     context.fillText(
       "像素生存者2 · 钻石手账  |  数据仅来自本机记录  |  local-first data journal",
-      240,
-      2057
+      264,
+      2048
     );
 
     return new Promise((resolve, reject) => {
@@ -3983,7 +3967,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=28", { updateViaCache: "none" })
+        .register("./sw.js?v=29", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
