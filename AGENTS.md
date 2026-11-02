@@ -106,6 +106,14 @@ iOS 网页和主屏幕 PWA 已确认无法可靠执行本地后台定时通知�
 - 今日简报使用小时数据；本周、本月、指定月份使用每日数据；今年简报只绘制当前月份及之前的数据。
 - 修改导出逻辑后，必须实际下载并检查 PNG 尺寸、中文字体、主题颜色、折线数据和非空图片。
 
+## Android 热更新
+
+- APK 网页热更新清单位于 `updates/android/latest.json`，资源包位于 `updates/android/web-v<版本>.zip`。
+- 每次部署热更新前运行 `C:\Users\16343\Documents\Codex\2026-10-30\xai\work\apk-build\build_hot_update.ps1`。
+- 热更新资源必须通过 SHA-256 和 RSA 发布签名校验，不得只发布未签名的 ZIP。
+- WebView 固定地址、数据目录和 IndexedDB 名称不得改变。
+- 普通网页功能可热更新；通知、权限、AndroidManifest 或原生桥接变更必须重新构建 APK。
+
 ## 横屏奖励页
 
 - 横屏且高度不超过 600px 时，必须隐藏助手卡以优先显示奖励时间。

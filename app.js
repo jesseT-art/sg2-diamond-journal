@@ -1166,6 +1166,10 @@
     return `${weight} ${size}px "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif`;
   }
 
+  function reportNumberFont(size) {
+    return `950 ${size}px "Bahnschrift", "Arial Black", "Segoe UI Black", sans-serif`;
+  }
+
   function roundRectPath(context, x, y, width, height, radius) {
     const r = Math.min(radius, width / 2, height / 2);
     context.beginPath();
@@ -1201,11 +1205,16 @@
     });
   }
 
-  function drawContainedImage(context, image, x, y, width, height) {
+  function drawContainedImage(context, image, x, y, width, height, pixelated = false) {
     if (!image?.width || !image?.height) return false;
     const scale = Math.min(width / image.width, height / image.height);
-    const drawWidth = image.width * scale;
-    const drawHeight = image.height * scale;
+    const drawScale = pixelated ? Math.max(1, Math.floor(scale)) : scale;
+    const drawWidth = image.width * drawScale;
+    const drawHeight = image.height * drawScale;
+    const previousSmoothing = context.imageSmoothingEnabled;
+    const previousQuality = context.imageSmoothingQuality;
+    context.imageSmoothingEnabled = !pixelated;
+    context.imageSmoothingQuality = pixelated ? "low" : "high";
     context.drawImage(
       image,
       x + (width - drawWidth) / 2,
@@ -1213,6 +1222,8 @@
       drawWidth,
       drawHeight
     );
+    context.imageSmoothingEnabled = previousSmoothing;
+    context.imageSmoothingQuality = previousQuality;
     return true;
   }
 
@@ -1441,7 +1452,7 @@
       colors.line
     );
     if (reportImages.logo) {
-      drawContainedImage(context, reportImages.logo, 152, 148, 430, 170);
+      drawContainedImage(context, reportImages.logo, 152, 92, 430, 310);
     } else {
       context.fillStyle = colors.accent;
       context.font = reportFont(62, 900);
@@ -1556,8 +1567,12 @@
             );
             gradient.addColorStop(0, accentStrong);
             gradient.addColorStop(
+              0.58,
+              accent
+            );
+            gradient.addColorStop(
               1,
-              colorMix(accent, "#ffffff", dark ? 0.2 : 0.72)
+              colorMix(accent, "#ffffff", dark ? 0.2 : 0.34)
             );
             return gradient;
           })()
@@ -1590,7 +1605,7 @@
       if (
         iconType === "diamond" &&
         reportImages.diamond &&
-        drawContainedImage(context, reportImages.diamond, iconX + 10, iconY + 10, 170, 170)
+        drawContainedImage(context, reportImages.diamond, iconX + 10, iconY + 10, 170, 170, true)
       ) {
         // The pixel diamond artwork already contains its own icon treatment.
       } else {
@@ -1607,10 +1622,35 @@
       context.font = reportFont(33, 800);
       context.textAlign = "left";
       context.fillText(`${label} · ${unit}`, x + 36, cardY + 63);
-      context.fillStyle = active ? (dark ? "#ffffff" : colors.text) : colors.text;
-      context.font = reportFont(105, 950);
+      const valueGradient = context.createLinearGradient(
+        x + cardWidth * 0.48,
+        cardY + 104,
+        x + cardWidth - 30,
+        cardY + 260
+      );
+      if (active) {
+        valueGradient.addColorStop(0, "#ffffff");
+        valueGradient.addColorStop(0.52, colorMix(onAccent, "#ffffff", 0.24));
+        valueGradient.addColorStop(1, colorMix(onAccent, accent, dark ? 0.12 : 0.2));
+      } else {
+        valueGradient.addColorStop(0, colors.accentStrong);
+        valueGradient.addColorStop(0.5, dark ? colorMix(accent, "#ffffff", 0.4) : colors.accent);
+        valueGradient.addColorStop(1, colors.accentStrong);
+      }
+      context.save();
+      context.fillStyle = valueGradient;
+      const valueFontSize = 158;
+      context.font = reportNumberFont(valueFontSize);
       context.textAlign = "right";
-      context.fillText(value, x + cardWidth - 38, cardY + 226);
+      const valueGap = 90;
+      context.shadowColor = active
+        ? hexToRgba("#06142b", dark ? 0.3 : 0.38)
+        : hexToRgba(accent, dark ? 0.3 : 0.16);
+      context.shadowBlur = active ? 10 : 16;
+      context.shadowOffsetY = active ? 4 : 7;
+      context.textBaseline = "middle";
+      context.fillText(value, x + cardWidth - valueGap, cardY + 166);
+      context.restore();
     });
 
     fillRoundRect(context, 120, 802, 2460, 1110, 38, colors.panel, colors.line);
@@ -1686,10 +1726,11 @@
       drawContainedImage(
         context,
         reportImages[source.key],
-        2704,
-        y - 27,
-        56,
-        56
+        2700,
+        y - 31,
+        64,
+        64,
+        true
       );
       context.fillStyle = colors.text;
       context.font = reportFont(30, 760);
@@ -1738,7 +1779,7 @@
 
     fillRoundRect(context, 120, 1948, 3600, 126, 30, colors.panelAlt, colors.line);
     if (reportImages.diamond) {
-      drawContainedImage(context, reportImages.diamond, 176, 1975, 72, 72);
+      drawContainedImage(context, reportImages.diamond, 176, 1975, 72, 72, true);
     }
     context.fillStyle = colors.text;
     context.font = reportFont(30, 850);
@@ -3793,11 +3834,6 @@
     $("#avatarPickBtn").addEventListener("click", () => elements.avatarInput.click());
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#ledgerBtn").addEventListener("click", openLedger);
-    $("#dataLedgerBtn").addEventListener("click", (event) => {
-      triggerButtonPress(event.currentTarget);
-      triggerHapticFeedback("single");
-      openLedger();
-    });
     $("#exportReportBtn").addEventListener("click", (event) => {
       triggerButtonPress(event.currentTarget);
       triggerHapticFeedback("single");
@@ -3967,7 +4003,7 @@
 
     const register = () => {
       navigator.serviceWorker
-        .register("./sw.js?v=29", { updateViaCache: "none" })
+        .register("./sw.js?v=37", { updateViaCache: "none" })
         .then((registration) => {
           serviceWorkerRegistration = registration;
           registration.update();
@@ -4007,6 +4043,7 @@
     }
     await loadAvatar();
     renderAll();
+    window.dispatchEvent(new CustomEvent("sg2-app-ready"));
     window.setInterval(updateUndoTimers, 250);
     window.setInterval(() => {
       renderDateHeader();

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "assetVersion": 37,
+  "minApkVersionCode": 37,
+  "zipUrl": "https://jesseT-art.github.io/sg2-diamond-journal/updates/android/web-v37.zip",
+  "zipSha256": "4be142b7b9e4166f3e8ceae841e397d29e24071fe33b33e568fe67e89f32a6f2",
+  "signature": "Dh8rUiVVdXPqNc22R1Tam8hzVSsYGtZriw8ZVkwLtH8qQ/3glFgZxHC7TTA9tvutBZP4A9/mr1SA1Bvqx/SoxXBlUvwFijO6k6aufsLJVO4K1sMQ2w5uFSsxhfCm9qZt/kOZjK1us5VTWJbmScnre5frpUpb/jlRt1w1pnhKTf2XMZSNZnK7oUihxiA+VqxVgWfD1U67UTXolybXY8/4CmgN+4INNKmdbMAlpIWBbG6yr3yPZUfJOTLYfUX4epSorDlfqahoARYWBjdFdQ+8Gzf5aJc5gIXmbbAI/GhKD9FqJRsSETYv51FjTRoDWsiEuleACXxqOlQEaU/RQfjW9A==",
+  "publishedAt": "2026-11-02T11:10:48+08:00",
+  "notes": [
+    "网页热更新 v37"
+  ]
+}
